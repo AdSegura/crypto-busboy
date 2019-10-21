@@ -1,10 +1,10 @@
 {
   "name": "crypto-busboy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "busboy upload with encryption option",
   "main": "src/index.js",
   "scripts": {
-    "test": "NODE_ENV=test node_modules/.bin/_mocha --exit --big_file_size '50mb' tests/"
+    "test": "NODE_ENV=test node_modules/.bin/_mocha --exit --big_file_size '2gb' tests/"
   },
   "engines": {
     "node": ">=10.16.3",
@@ -13,7 +13,8 @@
   "keywords": [
     "busboy",
     "crypto",
-    "upload"
+    "upload",
+    "streams"
   ],
   "author": "Adolfo Segura Hall",
   "license": "MIT",
@@ -44,9 +45,9 @@
     "superagent": "^5.1.0",
     "unzipper": "^0.9.9"
   },
-  "homepage": "https://github.com/adsegura/crypto-upload/blob/master/README.md",
+  "homepage": "https://github.com/adsegura/crypto-busboy/blob/master/README.md",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adsegura/crypto-upload.git"
+    "url": "git+https://github.com/adsegura/crypto-busboy.git"
   }
 }

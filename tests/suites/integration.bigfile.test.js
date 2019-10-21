@@ -8,13 +8,14 @@ const request = require('request');
 
 module.exports = function suite(mode, size) {
 
-    before(async () => {
+    before(async function() {
+        this.timeout(30000);
         await Helper.seeIfIHaveToMakeBigFile(size);
     });
 
-    after(async () => {
+   /* after(async () => {
         await Helper.removeBigFile();
-    });
+    });*/
 
     const upload_options = {
         dest: Helper.getUploadServerFolder(),
@@ -57,9 +58,10 @@ module.exports = function suite(mode, size) {
                 f1FullPath = res.errors[0].fullPath;
                 server.close(done)
             });
-    }).timeout(7000);
+    }).timeout(99000);
 
     it('Should Check Previous failed file has been deleted', done => {
+        if(! f1FullPath) done('No file found');
         fs.stat(f1FullPath, (e) => {
             e.code.should.eql('ENOENT');
             done();
@@ -95,7 +97,7 @@ module.exports = function suite(mode, size) {
                     server.close(done)
         });
 
-    }).timeout(7000);
+    }).timeout(99000);
 
     it('Should Download big file and MD5 check',  (done) => {
         const downloadBigFilePath = Helper.getUploadServerFolder() + '/big.file_downloaded';
@@ -114,7 +116,7 @@ module.exports = function suite(mode, size) {
 
         req.pipe(writeStream);
 
-    }).timeout(7000);
+    }).timeout(99000);
 
     it('Should Cancel BigFile',  (done) => {
         let express = Helper.express({
@@ -151,5 +153,5 @@ module.exports = function suite(mode, size) {
                 server.close(done)
             });
 
-    }).timeout(7000);
+    }).timeout(97000);
 };

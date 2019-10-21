@@ -220,9 +220,7 @@ module.exports = class Helper {
     static removeBigFile() {
         try {
             fs.unlinkSync(Helper.files().bigFile)
-        }catch (e) {
-
-        }
+        }catch (e) {}
     }
 
 

@@ -32,6 +32,7 @@ const options = {
 }
 ```
 
+### express example
 ```js
 const cryptoBusBoy = new CryptoBusBoy(options);
  
@@ -79,7 +80,7 @@ function uploadFilesCustomOpt(req, res, next){
 ```
 
 ## Upload output
-> upload f4.jpeg with form field `avatar = true`
+#### Upload f4.jpeg with form field `avatar = true`
 
 ```json
 {
@@ -99,7 +100,7 @@ function uploadFilesCustomOpt(req, res, next){
         ],
    "fields":[{"avatar":"true"}]}
 ```
-> upload two files, not allowed extensions `xsl, mdb`
+#### Upload two files, not allowed extensions `xsl, mdb`
 
 ```json
 {
@@ -129,7 +130,7 @@ function uploadFilesCustomOpt(req, res, next){
   "fields":[]
 }
 ```
-> Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`
+#### Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`
 ```json
 
 {
@@ -164,10 +165,11 @@ function uploadFilesCustomOpt(req, res, next){
 > DEBUG=cryptoBus:* npm run test
 ```
 # Tests
-Test will download some files from a repo and generate a 3GB file that will be removed after tests finish
+Test will download some files from a repo and generate a 2GB file that will be removed after tests finish
 
 ```bash
 > npm run test
+> NODE_ENV=test mocha --exit --big_file_size '50mb' tests/
 ```
 
 ### Dependencies
