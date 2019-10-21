@@ -28,24 +28,34 @@ module.exports = class Upload {
         this.cipher = cipher;
     }
 
+    /**
+     * start upload
+     *
+     * @param req
+     * @param opt
+     * @return {Promise<unknown>}
+     */
     start(req, opt) {
         return new Promise((resolve, reject) => {
             this.busBoy = this._getBusBoy(req, opt);
             this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
+
+            /* start busboy file listener **/
             this._bus_on_file(opt, resolve, reject);
 
+            /* busboy events **/
             this.busBoy
                 .on('field', this._field_cb())
                 .on('filesLimit', this._filesLimit_cb())
                 .on('error', this._bb_error_cb())
                 .on('finish', this._finish_bb_cb());
 
+            /* pipe request to busboy through detectorTimeout **/
             req
                 .pipe(this.detectorTimeout)
                 .pipe(this.busBoy)
                 .on('error', reject)
                 .on('finish', this._req_finish())
-
         })
     }
 
@@ -63,6 +73,7 @@ module.exports = class Upload {
 
             let cipher, detector;
 
+            /* on file new busFile **/
             const busFile = new BusFile(
                 file,
                 filename,
@@ -71,14 +82,18 @@ module.exports = class Upload {
                 this._crypto_mode
             );
 
+            /* store in temp array file path **/
             this.filesToDisk.push(busFile.fullPath());
 
+            /* fs writeableStream events **/
             busFile.writeable
-                .on('finish', this._finish_cb(busFile, resolve))
+                .on('finish', this._writeable_finish_cb(busFile, resolve))
                 .on('error', e => Promise.reject(e));
 
+            /* cipher file ? **/
             if (this._crypto_mode) cipher = await this._getCipher();
 
+            /* detector **/
             if (this._detection_mode) {
                 detector = this._getDetector();
                 detector
@@ -87,11 +102,13 @@ module.exports = class Upload {
                     .catch(this._detector_type_err);
             }
 
+            /* busboy file events **/
             busFile.file
                 .on('limit', this._file_limit(busFile, resolve))
                 .on('error', this._file_err(busFile, reject))
                 .on('end', this._file_end(busFile));
 
+            /* pipe **/
             if (this._detection_mode && this._crypto_mode) {
                 debug_mode('DETECTION MODE && CRYPTO MODE');
                 busFile.file.pipe(detector.stream()).pipe(cipher.cipherStream).pipe(cipher.cipherStreamIV).pipe(busFile.writeable);
@@ -106,11 +123,11 @@ module.exports = class Upload {
                 busFile.file.pipe(busFile.writeable);
             }
         });
-
     }
 
     /**
      * Get new Detector
+     *
      * @return {FileTypeDetector|*}
      * @private
      */
@@ -134,6 +151,7 @@ module.exports = class Upload {
      * @param req
      * @param opt
      * @return {Busboy}
+     * @private
      */
     _getBusBoy(req, opt) {
         return new Busboy({
@@ -147,6 +165,7 @@ module.exports = class Upload {
      *
      * @param opt
      * @return {*}
+     * @private
      */
     _getCryptoBusLimits(opt) {
         let limits;
@@ -164,6 +183,7 @@ module.exports = class Upload {
      *
      * @param opt
      * @return {*}
+     * @private
      */
     _getCryptoBusDestination(opt) {
         let dest;
@@ -176,6 +196,12 @@ module.exports = class Upload {
         return dest;
     }
 
+    /**
+     * request finish event callback
+     *
+     * @return {Function}
+     * @private
+     */
     _req_finish() {
         return () => {
             debug('FINISH');
@@ -185,6 +211,12 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * field event callback
+     *
+     * @return {Function}
+     * @private
+     */
     _field_cb() {
         return (fieldname, val) => {
             debug_bus('BusBoy ON FIELD, ', fieldname, val);
@@ -193,6 +225,12 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * limits event callback
+     *
+     * @return {Function}
+     * @private
+     */
     _filesLimit_cb() {
         return () => {
             debug_bus('MAX FILES REACHED, LIMIT IS: ', this.opt.limits.files);
@@ -200,6 +238,13 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * BusBoy finish event callback
+     *
+     * @param f
+     * @return {Function}
+     * @private
+     */
     _finish_bb_cb(f) {
         return () => {
             debug_bus('busboy finish parsing form!');
@@ -207,6 +252,12 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * BusBoy Error event callback
+     *
+     * @return {Function}
+     * @private
+     */
     _bb_error_cb() {
         return (e) => {
             debug_bus('busboy Error', e);
@@ -214,6 +265,13 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * detector timeOut callback
+     *
+     * @param reject
+     * @return {function(*=): *}
+     * @private
+     */
     _detector_timeout(reject) {
         return (err) => {
             if (!err) return;
@@ -225,7 +283,15 @@ module.exports = class Upload {
         }
     };
 
-    _finish_cb(busFile, resolve) {
+    /**
+     * fs writeableStream finish event callback
+     *
+     * @param busFile
+     * @param resolve
+     * @return {Function}
+     * @private
+     */
+    _writeable_finish_cb(busFile, resolve) {
         return () => {
             if (this.busboy_finished) {
                 Upload._removeListeners(busFile.writeable);
@@ -237,6 +303,14 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * detector type event callback
+     *
+     * @param busFile
+     * @param resolve
+     * @return {Function}
+     * @private
+     */
     _detector_type(busFile, resolve) {
         return (type) => {
             if (!type || !this._allowedExtensions(type.ext)) {
@@ -251,10 +325,25 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * detector error event callback
+     *
+     * @param e
+     * @return {Promise<never>}
+     * @private
+     */
     _detector_type_err(e) {
         return Promise.reject(e)
     };
 
+    /**
+     * busFile.file limit bytes event callback
+     *
+     * @param busFile
+     * @param resolve
+     * @return {Function}
+     * @private
+     */
     _file_limit(busFile, resolve) {
         return () => {
             debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${busFile.filename}`);
@@ -266,6 +355,14 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * busFile.file error event callback
+     *
+     * @param busFile
+     * @param reject
+     * @return {function(*): *}
+     * @private
+     */
     _file_err(busFile, reject) {
         return (e) => {
             debug_bus(`File ON ERROR [ ${busFile.filename} ] ERROR ->  ${e}`);
@@ -274,6 +371,13 @@ module.exports = class Upload {
         }
     };
 
+    /**
+     * busFile.file finish event callback
+     *
+     * @param busFile
+     * @return {Function}
+     * @private
+     */
     _file_end(busFile) {
         return () => {
             this.files.push(busFile.toJson());
@@ -286,6 +390,7 @@ module.exports = class Upload {
      * Remove listeners for a given ee
      *
      * @param event
+     * @private
      */
     static _removeListeners(event) {
         event.eventNames().forEach(listener => {
@@ -297,6 +402,7 @@ module.exports = class Upload {
      * Delete failed Files
      *
      * @param {*} file
+     * @private
      */
     static _deleteFailed(file) {
         debug('deleteFailed -> DELETING FILE -> ', file);
@@ -310,6 +416,7 @@ module.exports = class Upload {
     /**
      * return Promise with errors, warnings, files uploaded
      *
+     * @private
      */
     _closeReq(resolve) {
         debug('closereq Warnings -> ', JSON.stringify(this.warnings));
@@ -331,9 +438,9 @@ module.exports = class Upload {
     /**
      * Allowed Extensions Check
      *
-     * @param {*} ext ext property
-     *
-     * return BOLEAN
+     * @param ext
+     * @return {boolean}
+     * @private
      */
     _allowedExtensions(ext) { //TODO FIX edge case checking this.options.limits.allowed
         if (this._checkExtension(ext)) {
@@ -348,7 +455,9 @@ module.exports = class Upload {
     /**
      * Check if extension is allowed
      *
-     * @param {*} extension
+     * @param extension
+     * @return {boolean}
+     * @private
      */
     _checkExtension(extension) {
         debug_mime('checkExtension extension --> ', extension);

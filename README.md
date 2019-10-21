@@ -77,6 +77,92 @@ function uploadFilesCustomOpt(req, res, next){
             })
     }
 ```
+
+## Upload output
+> upload f4.jpeg with form field `avatar = true`
+
+```json
+{
+    "warnings":[],
+    "errors":[],
+    "files":[
+        {
+            "filename":"f4.jpeg",
+            "fullname":"4541a890-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+            "newname":"4541a890-f451-11e9-afca-ef6fa948a376-ciphered",
+            "fieldname":"my photo 4",
+            "ext":"jpeg",
+            "folder":"/crypto-upload/tests/files",
+            "fullPath":"/crypto-upload/tests/files/4541a890-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+            "error":null
+        }
+        ],
+   "fields":[{"avatar":"true"}]}
+```
+> upload two files, not allowed extensions `xsl, mdb`
+
+```json
+{
+  "warnings":[],
+  "errors":
+    [{
+        "filename":"f1.xlsx",
+        "fullname":"45463c70-f451-11e9-afca-ef6fa948a376-ciphered.xlsx",
+        "newname":"45463c70-f451-11e9-afca-ef6fa948a376-ciphered",
+        "fieldname":"my excel",
+        "ext":"xlsx",
+        "folder":"/crypto-upload/tests/files",
+        "fullPath":"/crypto-upload/tests/files/45463c70-f451-11e9-afca-ef6fa948a376-ciphered.xlsx",
+        "error":"EXTENSION NOT ALLOWED xlsx"
+    },
+    {
+        "filename":"f1.mdb",
+        "fullname":"4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered.mdb",
+        "newname":"4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered",
+        "fieldname":"my access",
+        "ext":"mdb",
+        "folder":"/crypto-upload/tests/files",
+        "fullPath":"/crypto-upload/tests/files/4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered.mdb",
+        "error":"EXTENSION NOT ALLOWED mdb"
+     }],
+  "files":[],
+  "fields":[]
+}
+```
+> Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`
+```json
+
+{
+    "warnings":["MAX FILES REACHED, LIMIT IS 2 FILES"],
+    "errors":[],
+    "files":
+        [{
+            "filename":"f2.jpeg",
+            "fullname":"4559eb80-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+            "newname":"4559eb80-f451-11e9-afca-ef6fa948a376-ciphered",
+            "fieldname":"my photo 2",
+            "ext":"jpeg",
+            "folder":"/crypto-upload/tests/files",
+            "fullPath":"/crypto-upload/tests/files/4559eb80-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+            "error":null
+            },{
+                "filename":"f3.jpeg",
+                "fullname":"455a60b0-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+                "newname":"455a60b0-f451-11e9-afca-ef6fa948a376-ciphered",
+                "fieldname":"my photo 3",
+                "ext":"jpeg",
+                "folder":"/crypto-upload/tests/files",
+                "fullPath":"/crypto-upload/tests/files/455a60b0-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
+                "error":null
+       }],
+    "fields":[]
+}
+```
+
+## Debug=cryptoBus:*
+```sh
+> DEBUG=cryptoBus:* npm run test
+```
 # Tests
 Test will download some files from a repo and generate a 3GB file that will be removed after tests finish
 
