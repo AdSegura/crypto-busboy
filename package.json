@@ -1,0 +1,52 @@
+{
+  "name": "crypto-busboy",
+  "version": "1.0.0",
+  "description": "busboy upload with encryption option",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "NODE_ENV=test node_modules/.bin/_mocha --exit --big_file_size '50mb' tests/"
+  },
+  "engines": {
+    "node": ">=10.16.3",
+    "npm": ">=v6.9.0"
+  },
+  "keywords": [
+    "busboy",
+    "crypto",
+    "upload"
+  ],
+  "author": "Adolfo Segura Hall",
+  "license": "MIT",
+  "dependencies": {
+    "busboy": "^0.3.1",
+    "debug": "^4.1.1",
+    "file-type": "^10.7.1",
+    "mime": "^2.4.0",
+    "mime-stream": "^1.0.1",
+    "mkdirp": "^0.5.1",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "body-parser": "^1.19.0",
+    "chai": "^4.2.0",
+    "chai-http": "^4.2.1",
+    "cli-progress": "^3.3.1",
+    "cookie-parser": "^1.4.4",
+    "dev-null": "^0.1.1",
+    "express": "^4.17.1",
+    "md5": "^2.2.1",
+    "md5-file": "^4.0.0",
+    "mocha": "^6.2.1",
+    "node-fetch": "^2.3.0",
+    "nodegit": "^0.26.2",
+    "prettysize": "^2.0.0",
+    "request": "^2.88.0",
+    "superagent": "^5.1.0",
+    "unzipper": "^0.9.9"
+  },
+  "homepage": "https://github.com/adsegura/crypto-upload/blob/master/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adsegura/crypto-upload.git"
+  }
+}
