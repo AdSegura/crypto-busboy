@@ -45,8 +45,13 @@ function uploadFiles(req, res, next){
                     res.statusCode = 429;
                 else if (r.errors.length > 0)
                     res.statusCode = 400;
-
-                res.json(r)
+                
+                if(r.files.length > 0)
+                    saveto_db(r.files)
+                        .then(() => res.json(r.files.map(f => f.filename)))
+                        .catch(e => next(e));
+                else
+                    res.json(r);
             })
             .catch(e => next(e))
     }
@@ -70,8 +75,13 @@ function uploadFilesCustomOpt(req, res, next){
                     res.statusCode = 429;
                 else if (r.errors.length > 0)
                     res.statusCode = 400;
-                
-                res.json(r)
+
+                if(r.files.length > 0)
+                    saveto_db(r.files)
+                        .then(() => res.json(r.files.map(f => f.filename)))
+                        .catch(e => next(e));
+                else
+                    res.json(r)
             })
             .catch(e => {
                 next(e)

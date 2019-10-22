@@ -156,6 +156,7 @@ module.exports = function suite(mode) {
             fileUploaded1_real_name = res.body.files[0].filename.split('.')[0];
         });
 
+
         it(`Should Download previously upload file mode [${mode}] and MD5 check`, async () => {
             const agent = Helper.factoryAgent(upload_options);
             const res = await agent

@@ -95,13 +95,13 @@ module.exports = class CryptoBusBoy extends Base {
                 });
 
                 decrypted.on('error', (e) => {
-                    console.error('decrypted.on', e);
+                    //console.error('decrypted.on', e);
                     return res.end()
                 }).pipe(toMimeStream).pipe(res);
 
             }).catch((e) => {
-            console.error('getCipherFile Error', e);
-            next(e);
+                //console.error('getCipherFile Error', e);
+                next(e);
         });
     }
 
