@@ -177,6 +177,8 @@ function uploadFilesCustomOpt(req, res, next){
 # Tests
 Test will download some files from a repo and generate a 2GB file that will be removed after tests finish
 
+`--big_file_size` [mb|gb]
+
 ```bash
 > npm run test
 > NODE_ENV=test mocha --exit --big_file_size '50mb' tests/
