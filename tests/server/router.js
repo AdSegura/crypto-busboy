@@ -8,6 +8,7 @@ module.exports = class Router {
 
     routes(){
         this.app.get('/', (req, res, next) => this.root(req, res, next));
+        this.app.get('/form', (req, res, next) => this.form(req, res, next));
         this.app.get('/file/:file', (req, res, next) => this.downloadFile(req, res, next));
         this.app.post('/busboy', (req, res, next) => this.uploadFiles(req, res, next));
         this.app.post('/busboy_opt', (req, res, next) => this.uploadFilesCustomOpt(req, res, next));
@@ -17,8 +18,13 @@ module.exports = class Router {
         res.json({id: this.instance.getServerId()})
     }
 
+    form(req, res, next) {
+        res.send('<html><head><body><form enctype="multipart/form-data" method="POST" action="/busboy"><input type="file" name="file"><input type="submit" value="Submit"></form></body></head></html>');
+    }
+
     uploadFiles(req, res, next){
         debug(this.instance.busOpt);
+        debug('uploadFiles');
         this.instance.cryptoBusBoy.upload(req)
             .then(r => {
                 if(r.warnings.length > 0)

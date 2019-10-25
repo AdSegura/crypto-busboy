@@ -70,11 +70,32 @@ module.exports = class CryptoBusBoy extends Base {
         // One important caveat is that if the Readable stream emits an error during processing,
         // the Writable destination is not closed automatically.
         // If an error occurs, it will be necessary to manually close each stream in order to prevent memory leaks.
-        debug('processRequestFiles...');
+        debug('processRequestFiles');
+
+        const errors = CryptoBusBoy.checkHeaders(req);
+        if(errors !== true)
+            return Promise.resolve({errors, warnings: [], files: []});
+
         const up = new Upload(this.options, this._crypto_mode, this._detection_mode, this.cipher);
         return up.start(req, opt);
     }
 
+    /**
+     * Check request headers
+     *
+     * @param req
+     * @return {Array|boolean}
+     */
+    static checkHeaders(req) {
+        if (!req.headers) return ['no headers found in request'];
+
+        if (!req.headers['content-type']) return ['Missing Content-Type'];
+
+        if (!req.headers['content-type'].includes('multipart/form-data; boundary='))
+            return ['no multipart/form-data; header found'];
+
+        return true;
+    }
 
     /**
      * Download cipher file

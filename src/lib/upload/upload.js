@@ -26,6 +26,7 @@ module.exports = class Upload {
         this._crypto_mode = crypto_mode;
         this._detection_mode = detection_mode;
         this.cipher = cipher;
+        debug('new Upload instance created')
     }
 
     /**
@@ -37,7 +38,9 @@ module.exports = class Upload {
      */
     start(req, opt) {
         return new Promise((resolve, reject) => {
+
             this.busBoy = this._getBusBoy(req, opt);
+            debug_bus('Start Busboy Core');
             this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
 
             /* start busboy file listener **/
@@ -68,6 +71,7 @@ module.exports = class Upload {
      * @private
      */
     _bus_on_file(opt, resolve, reject) {
+        debug_bus('Busboy listener on FILE');
         this.busBoy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
             debug_bus(`File [${fieldname}]: filename: ${filename},encoding: ${encoding}, mimeType: ${mimetype}`);
 

@@ -15,10 +15,15 @@ module.exports = class Cryptonite {
         this.key = this.getCipherKey();
 
         this.alg = this.options.alg || 'aes-256-cbc';
+        //this.alg = 'aes256';
+        debug('ALGORITHM', this.alg)
     }
 
     /**
-     * Cipher
+     * create cipher iv
+     *
+     * @param iv
+     * @return {Cipher}
      */
     createCipheriv(iv){
         return crypto.createCipheriv(this.alg, this.key, iv)

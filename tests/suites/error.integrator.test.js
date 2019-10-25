@@ -12,9 +12,25 @@ module.exports = function suite() {
             }
         });
 
-
         const req = await agent.post(Helper.urls().upload);
-        expect(req.status).eq(500);
+        expect(req.status).eq(400);
         expect(req.text).include('Missing Content-Type');
+    });
+
+    it('Should get an error No multipart/form-data; header found', async () => {
+        const agent = Helper.factoryAgent({
+            dest: Helper.getUploadServerFolder(),
+            limits: {
+                fileSize: 2000 * 1024 * 1024,
+                files: 1
+            }
+        });
+
+        const req = await agent.post(Helper.urls().upload)
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(Helper.files().f2);
+
+        expect(req.status).eq(400);
+        expect(req.text).include('no multipart/form-data; header found');
     })
 };

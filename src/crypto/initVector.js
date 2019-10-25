@@ -15,4 +15,4 @@ module.exports = class AppendInitVect extends Transform {
     this.push(chunk);
     cb();
   }
-}
+};
