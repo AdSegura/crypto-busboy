@@ -15,6 +15,7 @@ module.exports = class FileTypeDetector {
      */
     detect() {
         return new Promise((resolve, reject) => {
+
             this.detector.sms.once('mime', (type) => {
                 debug('found type', type.ext);
                 //this.detector.removeAllListeners();
@@ -24,7 +25,7 @@ module.exports = class FileTypeDetector {
             this.detector.sms.once('not_found', () => {
                 debug('not_found');
                 //this.detector.removeAllListeners();
-				return resolve()
+                return resolve()
             });
 
             this.detector.once('finish', () => {
@@ -38,12 +39,16 @@ module.exports = class FileTypeDetector {
                 //this.detector.removeAllListeners();
                 reject(e);
             });
+            /*this.detector.sms
+                .once('mime', resolve)
+                .once('not_found', reject);
+
+            this.detector
+                .once('finish', resolve)
+                .once('error', reject);*/
         })
     }
 
-    remListeners(){
-        //this.detector.sms.removeListener('mime')
-    }
 
     /**
      * detector stream transform

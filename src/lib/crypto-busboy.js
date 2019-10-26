@@ -5,12 +5,11 @@ const MimeStream = require("mime-stream");
 const makeFolder = require('../fs/index');
 const CryptoBusError = require('./crypto-busboy-error');
 const Base = require('./base');
-const Upload = require('./upload');
 
 module.exports = class CryptoBusBoy extends Base {
 
-    constructor(opt) {
-        super(opt);
+    constructor(opt, upload) {
+        super(opt, upload);
     }
 
     /**
@@ -76,7 +75,7 @@ module.exports = class CryptoBusBoy extends Base {
         if(errors !== true)
             return Promise.resolve({errors, warnings: [], files: []});
 
-        const up = new Upload(this.options, this._crypto_mode, this._detection_mode, this.cipher);
+        const up = new this.Upload(this.options, this._crypto_mode, this._detection_mode, this.cipher);
         return up.start(req, opt);
     }
 

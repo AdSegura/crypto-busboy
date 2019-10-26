@@ -215,6 +215,9 @@ module.exports = function suite(mode) {
             .post(Helper.urls().upload)
             .attach('my zip', Helper.files().f1zip);
 
+        if(res.status !== 400)
+            console.log(res.res.text);
+
         res.should.have.status(400);
         res.body.errors[0].should.have.property('filename').eql(Helper.getFileName('f1zip'));
         res.body.errors[0].should.have.property('error').eql('EXTENSION NOT ALLOWED zip');

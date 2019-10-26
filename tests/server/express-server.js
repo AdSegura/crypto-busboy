@@ -11,12 +11,16 @@ const CryptoBusBoy = require('../../src/');
 
 class ExpressServer {
 
-    constructor(options, busOpt) {
+    constructor(options, busOpt, mock) {
         this.options = Object.assign({}, options);
         this.busOpt = Object.assign({}, busOpt);
         this.app = express();
         this.server_id = ExpressServer.setServerId(this.options.server_id);
-        this.cryptoBusBoy = new CryptoBusBoy(this.busOpt);
+        if(mock)
+            this.cryptoBusBoy = new CryptoBusBoy(this.busOpt, require('../mock/upload'));
+        else
+            this.cryptoBusBoy = new CryptoBusBoy(this.busOpt);
+
         this.router = new Router(this);
     }
 

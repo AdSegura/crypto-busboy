@@ -40,6 +40,11 @@ module.exports = class Upload {
         return new Promise((resolve, reject) => {
 
             this.busBoy = this._getBusBoy(req, opt);
+
+           /* setTimeout(() => {
+               this.busBoy.emit('error', new Error('Fucked'))
+            },10);
+*/
             debug_bus('Start Busboy Core');
             this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
 
@@ -50,7 +55,7 @@ module.exports = class Upload {
             this.busBoy
                 .on('field', this._field_cb())
                 .on('filesLimit', this._filesLimit_cb())
-                .on('error', this._bb_error_cb())
+                .on('error', this._bb_error_cb(resolve, req))
                 .on('finish', this._finish_bb_cb());
 
             /* pipe request to busboy through detectorTimeout **/
@@ -262,9 +267,17 @@ module.exports = class Upload {
      * @return {Function}
      * @private
      */
-    _bb_error_cb() {
+    _bb_error_cb(resolve, req) {
         return (e) => {
             debug_bus('busboy Error', e);
+            this.errors.push(e.message);
+
+            this.detectorTimeout.clearDetector();
+            Upload._removeListeners(this.busBoy);
+            this.filesToDisk.forEach(failed => {
+                Upload._deleteFailed(failed);
+            });
+            return this._closeReq(resolve);
             //close all stream chained pipes to busboy file
         }
     };
@@ -412,6 +425,7 @@ module.exports = class Upload {
         debug('deleteFailed -> DELETING FILE -> ', file);
         fs.unlink(file, (err) => {
             if (err) {
+                if(process.env.NODE_ENV === 'test') return;
                 console.error(err);
             }
         });
@@ -431,9 +445,11 @@ module.exports = class Upload {
         const uploads = this.files.filter(f => f.error === null);
         const wrong = this.files.filter(f => f.error !== null);
 
+        debug('WRONG', [...this.errors, ...wrong]);
+
         return resolve({
             warnings: this.warnings,
-            errors: wrong,
+            errors: [...this.errors, ...wrong],
             files: uploads,
             fields: this.fields
         })

@@ -35,7 +35,7 @@ before(function(done){
 after(function (done) {
     this.timeout(8000);
     Helper.after();
-    done();
+    process.nextTick(done);
 });
 
 describe('Test crypto-busboy Module',

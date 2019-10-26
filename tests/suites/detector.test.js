@@ -34,7 +34,7 @@ module.exports = function suite(Detector) {
             .pipe(detector.stream())
             .pipe(fs.createWriteStream(dest1))
             .on('error', (e) => {
-                console.log(e)
+                console.error('Fs test Error', e)
             });
 
         await  fs.createReadStream(Helper.files().ftxt)

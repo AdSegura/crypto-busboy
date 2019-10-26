@@ -207,11 +207,10 @@ module.exports = class Helper {
                             fs.unlinkSync(path.join(folder, file))
                         }
                     });
-
                 fs.rmdirSync(folder);
             }
         }
-        fs.readdirSync(folder).forEach(f =>  deleteFolder(path.join(folder,f)))
+        fs.readdirSync(folder).forEach(f => deleteFolder(path.join(folder,f)))
     }
 
     /**
@@ -249,10 +248,11 @@ module.exports = class Helper {
      * return a new chai agent
      *
      * @param busopt
+     * @param mock boolean
      * @return {ChaiHttp.Agent}
      */
-    static factoryAgent(busopt) {
-        const server = new ExpressServer(null, busopt);
+    static factoryAgent(busopt, mock) {
+        const server = new ExpressServer(null, busopt, mock);
         return chai.request.agent(server);
     }
 

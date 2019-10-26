@@ -3,10 +3,10 @@ const CryptoBusError = require('./crypto-busboy-error');
 const os = require('os');
 const fs = require('fs');
 const FileExtensions = require('./file-extensions');
-
+const Upload = require('./upload');
 
 module.exports = class Base {
-    constructor(opt) {
+    constructor(opt, upload) {
         this.options = opt || {};
         this._crypto_mode = false;
         this._detection_mode = false;
@@ -28,6 +28,8 @@ module.exports = class Base {
             this.cipher = new Cryptonite(cryptoOpt);
             this._crypto_mode = true;
         }
+
+        this.Upload = upload || Upload;
     }
 
 
