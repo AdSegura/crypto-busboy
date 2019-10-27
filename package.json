@@ -1,6 +1,6 @@
 {
   "name": "crypto-busboy",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "busboy upload with encryption option",
   "main": "src/index.js",
   "scripts": {
@@ -19,6 +19,7 @@
   "author": "Adolfo Segura Hall",
   "license": "MIT",
   "dependencies": {
+    "base64-stream": "^1.0.0",
     "busboy": "^0.3.1",
     "debug": "^4.1.1",
     "file-type": "^10.7.1",

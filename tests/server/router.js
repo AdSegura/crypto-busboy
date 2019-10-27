@@ -19,7 +19,7 @@ module.exports = class Router {
     }
 
     form(req, res, next) {
-        res.send('<html><head><body><form enctype="multipart/form-data" method="POST" action="/busboy"><input type="file" name="file"><input type="submit" value="Submit"></form></body></head></html>');
+        res.send('<html><head><body><form enctype="multipart/form-data" method="POST" action="/busboy"><input class="upp" type="file" id="upload" name="file"><input id="btn" type="submit" value="Submit"></form></body></head></html>');
     }
 
     uploadFiles(req, res, next){

@@ -4,6 +4,7 @@ const BusFile = require('./busFile');
 const fs = require('fs');
 const Detector = require('../fileTypeDetector');
 const FileExtensions = require('../file-extensions');
+const {Base64Decode} = require('base64-stream');
 
 const debug = require('debug')('cryptoBus:upload');
 const debug_mode = require('debug')('cryptoBus:mode');
@@ -41,10 +42,6 @@ module.exports = class Upload {
 
             this.busBoy = this._getBusBoy(req, opt);
 
-           /* setTimeout(() => {
-               this.busBoy.emit('error', new Error('Fucked'))
-            },10);
-*/
             debug_bus('Start Busboy Core');
             this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
 
@@ -78,7 +75,7 @@ module.exports = class Upload {
     _bus_on_file(opt, resolve, reject) {
         debug_bus('Busboy listener on FILE');
         this.busBoy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
-            debug_bus(`File [${fieldname}]: filename: ${filename},encoding: ${encoding}, mimeType: ${mimetype}`);
+            debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
             let cipher, detector;
 
@@ -120,16 +117,59 @@ module.exports = class Upload {
             /* pipe **/
             if (this._detection_mode && this._crypto_mode) {
                 debug_mode('DETECTION MODE && CRYPTO MODE');
-                busFile.file.pipe(detector.stream()).pipe(cipher.cipherStream).pipe(cipher.cipherStreamIV).pipe(busFile.writeable);
+
+                if(encoding === 'base64')
+                    busFile.file
+                        .pipe(new Base64Decode())
+                        .pipe(detector.stream())
+                        .pipe(cipher.cipherStream)
+                        .pipe(cipher.cipherStreamIV)
+                        .pipe(busFile.writeable);
+                else
+                    busFile.file
+                        .pipe(detector.stream())
+                        .pipe(cipher.cipherStream)
+                        .pipe(cipher.cipherStreamIV)
+                        .pipe(busFile.writeable);
+
             } else if (!this._detection_mode && this._crypto_mode) {
                 debug_mode('NO DETECTION MODE && CRYPTO MODE');
-                busFile.file.pipe(cipher.cipherStream).pipe(cipher.cipherStreamIV).pipe(busFile.writeable);
+
+                if(encoding === 'base64')
+                    busFile.file
+                        .pipe(new Base64Decode())
+                        .pipe(cipher.cipherStream)
+                        .pipe(cipher.cipherStreamIV)
+                        .pipe(busFile.writeable);
+                else
+                    busFile.file
+                        .pipe(cipher.cipherStream)
+                        .pipe(cipher.cipherStreamIV)
+                        .pipe(busFile.writeable);
+
             } else if (this._detection_mode && !this._crypto_mode) {
                 debug_mode('DETECTION MODE && NO CRYPTO MODE');
-                busFile.file.pipe(detector.stream()).pipe(busFile.writeable);
+
+                if(encoding === 'base64')
+                    busFile.file
+                        .pipe(new Base64Decode())
+                        .pipe(detector.stream())
+                        .pipe(busFile.writeable);
+                else
+                    busFile.file
+                        .pipe(detector.stream())
+                        .pipe(busFile.writeable);
+
             } else if (!this._detection_mode && !this._crypto_mode) {
                 debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
-                busFile.file.pipe(busFile.writeable);
+
+                if(encoding === 'base64')
+                    busFile.file
+                        .pipe(new Base64Decode())
+                        .pipe(busFile.writeable);
+                else
+                    busFile.file
+                        .pipe(busFile.writeable);
             }
         });
     }
