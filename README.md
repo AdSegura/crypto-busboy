@@ -184,6 +184,16 @@ Test will download some files from a repo and generate a 2GB file that will be r
 > NODE_ENV=test mocha --exit --big_file_size '50mb' tests/
 ```
 
+### AB
+**Start server**
+```bash
+➜ NODE_ENV=test node tests/server/express-server.js --port 3000
+```
+**Run AB tests**
+```bash
+➜ ab -n 100 -c 10 -p ./tests/ab_files/file.txt -T "multipart/form-data; boundary=1234567890" http://localhost:3000/busboy
+```
+
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)
 * [file-type](https://github.com/sindresorhus/file-type)
