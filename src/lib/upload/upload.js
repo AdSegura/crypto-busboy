@@ -77,14 +77,14 @@ module.exports = class Upload {
         this.busBoy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
             debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
-            let cipher, detector;
+            let cipher, detector, folder;
 
             /* on file new busFile **/
             const busFile = new BusFile(
                 file,
                 filename,
                 fieldname,
-                this._getCryptoBusDestination(opt),
+                folder = this._getCryptoBusDestination(opt),
                 this._crypto_mode
             );
 
