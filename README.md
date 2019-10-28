@@ -90,7 +90,7 @@ function uploadFilesCustomOpt(req, res, next){
 ```
 
 ## Upload output
-#### Upload f4.jpeg with form field `avatar = true`
+**Upload f4.jpeg with form field `avatar = true`**
 
 ```json
 {
@@ -110,7 +110,7 @@ function uploadFilesCustomOpt(req, res, next){
         ],
    "fields":[{"avatar":"true"}]}
 ```
-#### Upload two files, not allowed extensions `xsl, mdb`
+**Upload two files, not allowed extensions `xsl, mdb`**
 
 ```json
 {
@@ -140,7 +140,7 @@ function uploadFilesCustomOpt(req, res, next){
   "fields":[]
 }
 ```
-#### Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`
+**Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`**
 ```json
 
 {
@@ -170,7 +170,7 @@ function uploadFilesCustomOpt(req, res, next){
 }
 ```
 
-## Debug=cryptoBus:*
+**`Debug=cryptoBus:*`**
 ```sh
 > DEBUG=cryptoBus:* npm run test
 ```
@@ -187,7 +187,7 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ### AB
 **Start server**
 ```bash
-➜ NODE_ENV=test node tests/server/express-server.js --port 3000
+➜ NODE_ENV=test node tests/server/express-server.js --port 3000 --conf [default, cipher, allowed, cipher_allowed]
 ```
 **Run AB tests**
 ```bash
@@ -201,6 +201,7 @@ Test will download some files from a repo and generate a 2GB file that will be r
 * [mime-stream](https://github.com/meyfa/mime-stream)
 * [mkdirp](https://github.com/substack/node-mkdirp#readme)
 * [uuid](https://github.com/kelektiv/node-uuid#readme)
+* [base64-stream](https://github.com/mazira/base64-stream#readme)
 
 ### Contributing
 Pull requests are welcome.

@@ -97,17 +97,25 @@ if (process.argv.includes('--port')) {
     script_mode = true;
     const portPos = process.argv.indexOf('--port') + 1;
     const port = process.argv[portPos];
-
-    const server = new ExpressServer(null,{
+    let conf = {
         dest: Helper.getUploadServerFolder(),
         limits: {
-            //fileSize: 50000 * 1024 * 1024,
             fileSize: 1024 * 1024,
-            files: 2
+            files: 1
         }
+    };
 
-    });
+    if (process.argv.includes('--conf')){
+        const confPos = process.argv.indexOf('--conf') + 1;
+        const confile = process.argv[confPos];
+        console.log(require('./conf/' + confile + '.json'));
+        conf = Object.assign({}, conf, require('./conf/' + confile + '.json'));
+    }
+
+    const server = new ExpressServer(null, conf);
     server.listen(port);
+    console.log('Server Listening: ' + server.address().port);
+    console.log('Server conf: ', conf);
 
 } else {
     /** module mode */
