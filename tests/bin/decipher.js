@@ -3,7 +3,9 @@ const path = require('path');
 const http = require("http");
 const fs = require('fs');
 const mkdirp = require('mkdirp');
-
+const md5file = require('md5-file');
+const md5_hash = '0045f4c2a16ba5651f6e26139805d5b2';
+const assert = require('assert').strict;
 
 class Decipher {
     constructor(dest) {
@@ -49,14 +51,20 @@ if (process.argv.includes('-d')) {
 
     decipher.dec()
         .then(() => {
-            console.log('finish...');
                 Helper.readDir(dest, (e, files) => {
+                    console.log('Downloaded ' + files.length + ' files... now testing md5');
+                    let i = files.length;
                     files.forEach((file) => {
-                        console.log(file);
-                        fs.unlinkSync(file);
+                        md5file(file, (e, md5) => {
+                            if(e) throw e;
+                            assert.deepStrictEqual(md5, md5_hash);
+                            fs.unlinkSync(file);
+                            i -= 1;
+                            if(i <= 0 ) console.log('test finished');
+                        })
                     });
             })
-        })
+        });
 
 } else {
     module.exports = Decipher;
