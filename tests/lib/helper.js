@@ -1,4 +1,3 @@
-const {Base64Encode} = require("base64-stream");
 const path = require('path');
 const fs = require('fs');
 const ExpressServer = require('../server/express-server');
@@ -8,7 +7,6 @@ const chaiHttp = require('chai-http');
 chai.use(chaiHttp);
 const md5 = require('md5-file');
 const uuid = require('uuid/v1');
-const mime = require('mime');
 const os = require('os');
 const MakeBigFile = require('./makeBigFile');
 const TMP_FILES_FOLDER = path.join(os.tmpdir(), '/', 'cryptobus-' + uuid());
@@ -295,15 +293,6 @@ module.exports = class Helper {
         return path.join(__dirname, '../uploads');
     }
 
-    /**
-     * ab files folder
-     *
-     * @return {string}
-     */
-    static ab_path() {
-        return path.join(__dirname, '../ab_files');
-    }
-
     static express(busopt, cb) {
         return new ExpressServer(null, busopt);
     }
@@ -374,22 +363,4 @@ module.exports = class Helper {
         return opt;
     }
 
-    static generate_ab_file(file){
-        const file_name = path.basename(file).split('.')[0] + '.txt';
-        const writeable = fs.createWriteStream(path.join(Helper.ab_path(), '/', file_name));
-        const readable = fs.createReadStream(file);
-        writeable.write(Helper.ab_header_file(file), () => {
-            readable
-                .pipe(new Base64Encode)
-                .pipe(writeable);
-        });
-
-        readable.once('end', () => {
-            writeable.write('\r\n--1234567890--')
-        })
-    }
-
-    static ab_header_file(file){
-        return `--1234567890\r\nContent-Disposition: form-data; name="file"; filename="${path.basename(file)}"\r\nContent-Type: ${mime.getType(file)}\r\nContent-Transfer-Encoding: base64\r\n\r\n`
-    }
 };

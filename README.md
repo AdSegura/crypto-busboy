@@ -198,6 +198,18 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ➜ node tests/bin/decipher.js -d /tmp/foo
 ```
 
+**Generate AB files for post request cli**
+```bash
+# Generate f5.png.txt into tests/ab_files/
+➜ node tests/bin/generate_ab_file.js -f ./tests/uploads/f5.png 
+```
+**Generate AB files for post request js**
+```js
+//Generate f1.pptx.txt into tests/ab_files/
+const generate_ab_files = require('./tests/bin/generate_ab_file');
+generate_ab_files.generate('./tests/uploads/f1.pptx')
+```
+
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)
 * [file-type](https://github.com/sindresorhus/file-type)
