@@ -184,7 +184,7 @@ Test will download some files from a repo and generate a 2GB file that will be r
 > NODE_ENV=test mocha --exit --big_file_size '50mb' tests/
 ```
 
-### AB
+### AB Stress Upload Tests
 **Start server**
 ```bash
 ➜ NODE_ENV=test node tests/server/express-server.js --port 3000 --conf [default, cipher, allowed, cipher_allowed]
@@ -193,8 +193,9 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ```bash
 ➜ ab -n 100 -c 10 -p ./tests/ab_files/file.txt -T "multipart/form-data; boundary=1234567890" http://localhost:3000/busboy
 ```
-**Download files and md5 check**
+**Test Download files and md5 check them against original**
 ```bash
+# below command will cleanup all ab uploads files and remove the from dest after test  
 ➜ node tests/bin/decipher.js -d /tmp/foo
 ```
 
