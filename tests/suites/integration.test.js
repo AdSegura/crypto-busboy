@@ -4,7 +4,6 @@ const {describe, it} = require('mocha');
 const expect = chai.expect;
 chai.should();
 const fs = require('fs');
-const path = require('path');
 const md5 = require("md5");
 const {binaryParser} = require('../lib/binaryParser');
 const Helper = require('../lib/helper');

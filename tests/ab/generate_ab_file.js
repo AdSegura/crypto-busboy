@@ -14,7 +14,7 @@ class GenerateABFile {
      * @return {string}
      */
     static ab_path() {
-        return path.join(__dirname, '../ab_files');
+        return path.join(__dirname, './ab_files');
     }
 
     /**

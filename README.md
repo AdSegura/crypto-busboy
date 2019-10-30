@@ -191,7 +191,7 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ```
 **Run AB tests**
 ```bash
-➜ ab -n 100 -c 10 -p ./tests/ab_files/file.txt -T "multipart/form-data; boundary=1234567890" http://localhost:3000/busboy
+➜ ab -n 100 -c 10 -p ./tests/ab/ab_files/file.txt -T "multipart/form-data; boundary=1234567890" http://localhost:3000/busboy
 ```
 **Test Download files and md5 check them against original**
 ```bash
