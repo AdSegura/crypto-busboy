@@ -185,38 +185,15 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ```
 
 ### AB Stress Upload Tests
-**Start server**
-```bash
-➜ NODE_ENV=test node tests/server/express-server.js --port 3000 --conf [default, cipher, allowed, cipher_allowed]
-```
 **Run AB tests**
+* `-ft` file to transform to ab format and test
+* `-n`  number of requests
+* `-c`   concurrent request
+
 ```bash
-➜ ab -n 100 -c 10 -p ./tests/ab/ab_files/file.txt -T "multipart/form-data; boundary=1234567890" http://localhost:3000/busboy
-```
-**Test Download files and md5 check them against original**
-```bash
-# below command will cleanup all ab uploads files and remove the from dest after test  
-➜ node tests/bin/decipher.js -d /tmp/foo
+➜ NODE_ENV=test node tests/ab/index.js -ft tests/uploads/f1.xlsx -c 10 -n 100
 ```
 
-**Generate AB files for post request cli**
-```bash
-# Generate f5.png.txt into tests/ab_files/
-➜ node tests/bin/generate_ab_file.js -f ./tests/uploads/f5.png
- 
-# Generate f5.png.txt into /tmp/f5.png.txt
-➜ node tests/bin/generate_ab_file.js -f ./tests/uploads/f5.png -d /tmp/f5.png.txt
-```
-**Generate AB files for post request js**
-```js
-//Generate f1.pptx.txt into tests/ab_files/f1.pptx.txt
-const generate_ab_files = require('./tests/bin/generate_ab_file');
-generate_ab_files.generate('./tests/uploads/f1.pptx').then(file => foo);
-
-//Generate f1.pptx.txt into /tmp/f1.pptx.foo
-const dest = '/tmp/f1.pptx.foo';
-generate_ab_files.generate('./tests/uploads/f1.pptx', dest).then(file => foo);
-```
 
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)

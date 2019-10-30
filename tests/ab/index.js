@@ -1,7 +1,12 @@
 let file_to_test;
+let requests = 1;
+let concurrent = 1;
 if (process.argv.includes('-ft')) {
     file_to_test = process.argv[process.argv.indexOf('-ft') + 1];
-    console.log('file_to_test', file_to_test);
+    if (process.argv.includes('-n'))
+        requests = process.argv[process.argv.indexOf('-n') + 1];
+    if (process.argv.includes('-c'))
+        concurrent = process.argv[process.argv.indexOf('-c') + 1];
 } else {
     console.error('-ft');
     process.exit(-1);
@@ -20,6 +25,7 @@ const assert = require('assert').strict;
 const uuid = require('uuid/v1');
 const os = require('os');
 const dest = `${os.tmpdir()}/test-${uuid()}`;
+let ab_file_generated;
 
 server.listen();
 
@@ -28,8 +34,9 @@ const md5_hash = md5File.sync(file_to_test);
 generate_ab
     .generate(file_to_test)
     .then(file => {
+        ab_file_generated = file;
         ab
-            .test(1, 1, file, server.address().port)
+            .test(requests, concurrent, file, server.address().port)
             .then(code => download(dest, server.address().port))
     });
 
@@ -42,7 +49,6 @@ function download(dest, port) {
                 console.log('Downloaded ' + files.length + ' files... now testing md5');
                 let i = files.length;
                 files.forEach((file) => {
-                    console.log(file);
                     md5File(file, (e, md5) => {
                         if (e) throw e;
                         assert.deepStrictEqual(md5, md5_hash);
@@ -58,5 +64,6 @@ function download(dest, port) {
 function finish(dest) {
     console.log('test finished...');
     fs.rmdirSync(dest);
+    fs.unlinkSync(ab_file_generated);
     server.close();
 }
