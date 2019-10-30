@@ -21,10 +21,10 @@ class Downloader {
             let i;
             this.readFolder(this.folder, (e, files) => {
                 i = files.length - 1;
+                if(i === 0 ) return resolve('no files downloaded..., test pass but you pick a file that did not pass limits');
                 files.forEach(file => {
                     if (path.basename(file) === '.gitignore') return;
                     this.download(file, () => {
-                        //console.log('download...');
                         fs.unlink(file, () => {
                             i -= 1;
                             if (i <= 0) return resolve();

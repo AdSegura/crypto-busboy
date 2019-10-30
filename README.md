@@ -196,17 +196,23 @@ to base64Decode the incoming stream before doing anything else with the file.
 * `-ft` file to transform to ab format and test
 * `-n`  number of requests
 * `-c`  concurrent requests
+* `-conf` tests/server/conf/cipher_allowed.json|default.json|allowed.json|cipher.json
+
+You can pass any json representing crypto-busboy options.
 
 ```bash
-➜ node tests/ab -ft file.zip -n 100 -c 10
+➜ node tests/ab -ft file.zip -c 10 -n 100 -conf tests/server/conf/cipher_allowed.json
 ```
 
 The above command will:
+* start express server with crypto-busboy options `cipher_allowed.json`
 * Upload file.zip `100` times in bunches of `10` using AB tool.
 * Present AB results. 
 * Download all 100 files to a temp location.
 * md5-check to verify that the file we uploaded is the same we downloaded.
 * Clean up everything.
+
+if you keep a file that do not pass limits yo will be notified.
 
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)

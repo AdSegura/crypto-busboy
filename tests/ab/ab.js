@@ -21,8 +21,10 @@ class AB {
 
     static listeners(ab) {
         return new Promise((resolve, reject) => {
+            let out;
             ab.stdout.on('data', data => {
                 console.log(`stdout: ${data}`);
+                out += data;
             });
 
             ab.stderr.on('data', data => {
@@ -31,7 +33,7 @@ class AB {
 
             ab
                 .on('error', e => reject(e))
-                .on('close', code => resolve(code));
+                .on('close', code => resolve(code, out));
         });
     }
 }
