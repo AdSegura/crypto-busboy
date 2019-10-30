@@ -198,14 +198,15 @@ to base64Decode the incoming stream before doing anything else with the file.
 * `-c`  concurrent requests
 
 ```bash
-➜ node tests/ab/index.js -ft tests/uploads/f1.xlsx -n 100 -c 10
+➜ node tests/ab -ft file.zip -n 100 -c 10
 ```
 
-The above command will upload 100 times the file f1.xlsx in bunches of 10, present AB results 
-and will download all 100 files to a temp location and do a md5-check to verify that the file we uploaded
-is the same we download.
-
-Then it will clean up everything.
+The above command will:
+* Upload file.zip `100` times in bunches of `10` using AB tool.
+* Present AB results. 
+* Download all 100 files to a temp location.
+* md5-check to verify that the file we uploaded is the same we downloaded.
+* Clean up everything.
 
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)
