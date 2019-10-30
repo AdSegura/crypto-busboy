@@ -185,6 +185,13 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ```
 
 ### AB Stress Upload Tests
+For test uploads with [AB](https://httpd.apache.org/docs/2.4/programs/ab.html) 
+we need to base64 encode the file we are uploading,
+so instead of a binary stream we have a base64 data stream at the server.
+
+Tests results will be increased against a typical browser upload because at the server we need 
+to base64Decode the incoming stream before doing anything else with the file.
+
 **Run AB tests**
 * `-ft` file to transform to ab format and test
 * `-n`  number of requests
@@ -194,6 +201,11 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ➜ NODE_ENV=test node tests/ab/index.js -ft tests/uploads/f1.xlsx -c 10 -n 100
 ```
 
+The above command will upload 100 times the file f1.xlsx in bunches of 10, present AB results 
+and will download all 100 files to a temp location and do a md5-check to verify that the file we uploaded
+is the same we download.
+
+Then it will clean up everything.
 
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)
