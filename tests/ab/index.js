@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test';
+
 let file_to_test;
 let requests = 1;
 let concurrent = 1;

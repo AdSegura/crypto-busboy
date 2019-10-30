@@ -195,10 +195,10 @@ to base64Decode the incoming stream before doing anything else with the file.
 **Run AB tests**
 * `-ft` file to transform to ab format and test
 * `-n`  number of requests
-* `-c`   concurrent request
+* `-c`  concurrent requests
 
 ```bash
-➜ NODE_ENV=test node tests/ab/index.js -ft tests/uploads/f1.xlsx -c 10 -n 100
+➜ node tests/ab/index.js -ft tests/uploads/f1.xlsx -n 100 -c 10
 ```
 
 The above command will upload 100 times the file f1.xlsx in bunches of 10, present AB results 
