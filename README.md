@@ -185,6 +185,8 @@ Test will download some files from a repo and generate a 2GB file that will be r
 ```
 
 ### AB Stress Upload Tests
+You need to have installed **AB - Apache HTTP server benchmarking tool**
+
 For test uploads with [AB](https://httpd.apache.org/docs/2.4/programs/ab.html) 
 we need to base64 encode the file we are uploading,
 so instead of a binary stream we have a base64 data stream at the server.
@@ -212,7 +214,7 @@ The above command will:
 * md5-check to verify that the file we uploaded is the same we downloaded.
 * Clean up everything.
 
-if you keep a file that do not pass limits yo will be notified.
+if you keep a file to test upload that do not pass limits detector you will be notified.
 
 ### Dependencies
 * [busboy](https://github.com/mscdex/busboy)
