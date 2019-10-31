@@ -1,3 +1,5 @@
+[![Build Status](https://api.travis-ci.org/adsegura/crypto-busboy.svg?branch=master)](https://travis-ci.org/adsegura/crypto-busboy)
+
 # crypto-busboy
 Upload and download files from nodejs using streams.
 

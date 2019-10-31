@@ -24,26 +24,19 @@ module.exports = function suite(Detector) {
         done();
     });
 
-    it('Should pass data untouched', async () => {
+    it('Should pass data untouched',  done => {
         const detector = new Detector;
-
         const dest1 = path.join(Helper.getUploadServerFolder(), uuid() + '-untouched.through');
-        const dest2 = path.join(Helper.getUploadServerFolder(), uuid() + '-untouched');
+        const readable = fs.createReadStream(Helper.files().ftxt);
 
-        await fs.createReadStream(Helper.files().ftxt)
+        readable
             .pipe(detector.stream())
             .pipe(fs.createWriteStream(dest1))
-            .on('error', (e) => {
-                console.error('Fs test Error', e)
+            .on('error', e => console.error('Fs test Error', e))
+            .on('finish', () => {
+                expect(Helper.md5File(dest1)).eq(Helper.md5File(Helper.files().ftxt));
+                done();
             });
-
-        await  fs.createReadStream(Helper.files().ftxt)
-            .pipe(fs.createWriteStream(dest2))
-            .on('error', (e) => {
-                console.log(e)
-            });
-
-        expect(Helper.md5File(dest1)).eq(Helper.md5File(dest2));
     });
 
 
