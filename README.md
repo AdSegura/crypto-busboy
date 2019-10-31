@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/AdSegura/crypto-busboy.svg?branch=master)](https://travis-ci.org/AdSegura/crypto-busboy)
-
+[![node version](https://badgen.net/badge/node/%3E=10.16.3/green)](https://badgen.net/badge/node/%3E=10.16.3/green)
+[![npm version](https://badge.fury.io/js/crypto-busboy.svg)](https://badge.fury.io/js/crypto-busboy)
 # crypto-busboy
 Upload and download files from nodejs using streams.
 
@@ -9,6 +10,10 @@ All data manipulation is done using streams.
 
 This module is based on [busboy upload module](https://github.com/mscdex/busboy) 
 
+# Install 
+```sh
+> npm i crypto-busboy
+```
 # Features
 * upload files with busboy size limits and file count limit, (basic BusBoy usage)
 * upload only files with allowed extension [`file-type module` extensions support](https://github.com/sindresorhus/file-type#supported-file-types).
@@ -177,7 +182,7 @@ function uploadFilesCustomOpt(req, res, next){
 > DEBUG=cryptoBus:* npm run test
 ```
 # Tests
-Test will download some files from a repo and generate a 2GB file that will be removed after tests finish
+Test will download some files from a repo and generate a ~~2GB~~ 50mb file that will be removed after tests finish
 
 `--big_file_size` [mb|gb]
 
