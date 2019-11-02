@@ -7,6 +7,7 @@ const fs = require('fs');
 const md5 = require("md5");
 const {binaryParser} = require('../lib/binaryParser');
 const Helper = require('../lib/helper');
+const path = require('path');
 
 module.exports = function suite(mode) {
 
@@ -176,6 +177,34 @@ module.exports = function suite(mode) {
             .field("avatar", "true");
 
 
+        res.should.have.status(200);
+        res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f4'));
+        res.body.files[0].should.have.property('error').eql(null);
+        res.body.fields[0].should.have.property('avatar').eql("true");
+    });
+
+    it(`Should Upload file with writeStream destination as option [${mode}]`, async () => {
+        const dest =  {
+            createWriteStream: (filename) => {
+                console.log('filename', filename);
+                return fs.createWriteStream(path.join(Helper.getUploadServerFolder(), filename))
+            }
+        };
+
+        const upload_options = {dest};
+
+        if (mode === 'crypto')
+            upload_options.key = 'super-password';
+
+        const agent = Helper.factoryAgent(upload_options);
+
+        const res = await agent
+            .post(Helper.urls().upload)
+            .attach('my photo 4', Helper.files().f4)
+            .field("avatar", "true");
+
+
+        console.log(res.body);
         res.should.have.status(200);
         res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f4'));
         res.body.files[0].should.have.property('error').eql(null);

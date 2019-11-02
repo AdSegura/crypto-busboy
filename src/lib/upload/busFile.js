@@ -1,6 +1,7 @@
 const path = require('path');
 const uuid = require('uuid/v1');
 const fs = require('fs');
+const Helper = require('../lib/helper');
 
 module.exports = class BusFile {
 
@@ -13,7 +14,9 @@ module.exports = class BusFile {
         this.ext = BusFile.setExtension(filename);
         this.folder = folder;
         this.error = null;
-        this.writeable = fs.createWriteStream(this.fullPath());
+        this.writeable = Helper.is_writeStream(this.folder) ?
+            this.folder.createWriteStream(this.fullName()) :
+            fs.createWriteStream(this.fullPath());
     }
 
     fullName() {
@@ -21,7 +24,21 @@ module.exports = class BusFile {
     }
 
     fullPath() {
-        return path.join(this.folder, this.fullName());
+        if(typeof this.folder === 'string')
+            return path.join(this.folder, this.fullName());
+
+
+        return (this.get_folder()).replace(/\/$/,'') + '/' + this.fullName();
+    }
+
+    get_folder(){
+        if(typeof this.folder === 'string')
+            return this.folder;
+
+        if(Helper.is_writeStream(this.folder))
+            if(this.folder.path) return this.folder.path;
+
+            return 'stream://';
     }
 
     toJson() {
@@ -31,7 +48,7 @@ module.exports = class BusFile {
             newname: this.newname,
             fieldname: this.fieldname,
             ext: this.ext,
-            folder: this.folder,
+            folder: this.get_folder(),
             fullPath: this.fullPath(),
             error: this.error
         }

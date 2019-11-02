@@ -4,6 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const FileExtensions = require('./file-extensions');
 const Upload = require('./upload');
+const Helper = require('./lib/helper');
 
 module.exports = class Base {
     constructor(opt, upload) {
@@ -11,8 +12,8 @@ module.exports = class Base {
         this._crypto_mode = false;
         this._detection_mode = false;
         this.cipher = null;
-
         this.options.dest = this.options.dest || os.tmpdir();
+
         this.checkDestinationFolder();
         this.options.limits = this.options.limits || {};
 
@@ -38,6 +39,9 @@ module.exports = class Base {
      */
     checkDestinationFolder(folder) {
         folder = folder || this.options.dest;
+
+        if(Helper.is_writeStream(folder)) return;
+
         try {
             return fs.accessSync(folder, fs.constants.W_OK)
         }catch (e) {

@@ -2,6 +2,9 @@ const {it} = require("mocha");
 const {expect} = require("chai");
 const Helper = require('../lib/helper');
 const os = require('os');
+const fs = require('fs');
+const uuid = require('uuid/v1');
+
 
 module.exports = function suite(CryptoBusBoy) {
 
@@ -64,5 +67,16 @@ module.exports = function suite(CryptoBusBoy) {
         expect(upload.cipher.constructor.name).eql('Cryptonite');
         expect(upload.options.dest).eql(os.tmpdir());
         expect((Object.keys(upload.options.limits)).length).eql(0);
+    });
+
+    it('should instantiate CryptoBusBoy module with dest as a writeable stream', async () => {
+        const dest =  {
+            createWriteStream: (filename) => {
+                return fs.createWriteStream(filename)
+            }
+        };
+        const upload = new CryptoBusBoy({dest});
+
+        expect(upload.options.dest.createWriteStream.constructor.name).eql('Function');
     });
 };
