@@ -100,6 +100,7 @@ module.exports = function suite(mode) {
                 .attach('my photo 5', Helper.files().f5);
 
             //console.log(res)
+            if(res.status !== 429) console.log(res.body);
             res.should.have.status(429);
             expect(res.body.files.length).eq(2);
             expect(file_names.includes(res.body.files[0].filename)).eq(true);
@@ -113,7 +114,7 @@ module.exports = function suite(mode) {
             fileUploaded2 = res.body.files[1].fullname;
             fileUploaded1_real_name = res.body.files[0].filename.split('.')[0];
             fileUploaded2_real_name = res.body.files[1].filename.split('.')[0];
-        });
+        }).timeout(5000)
 
 
         it(`Should Download two files previously uploaded mode [${mode}] and MD5 check`, async () => {
@@ -243,8 +244,11 @@ module.exports = function suite(mode) {
             .post(Helper.urls().upload)
             .attach('my zip', Helper.files().f1zip);
 
-        if(res.status !== 400)
-            console.log(res.res.text);
+        if(res.status !== 400) {
+            console.log('response', res.res.text);
+            console.log('agent', agent);
+            console.log('upload_opt', upload_options);
+        }
 
         res.should.have.status(400);
         res.body.errors[0].should.have.property('filename').eql(Helper.getFileName('f1zip'));
