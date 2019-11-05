@@ -14,8 +14,6 @@ module.exports = class StreamTypeTransform extends Transform {
 		this.sms_emitted = false;
 		this.found = false;
 		this.buffer = new Buffer.alloc(fileType.minimumBytes);
-		debug('options', this.opt);
-		debug('minimumBytes', fileType.minimumBytes);
 	}
 
 	/**
@@ -27,10 +25,6 @@ module.exports = class StreamTypeTransform extends Transform {
 	 * @private
 	 */
 	_transform(data, encoding, callback) {
-
-		if(this.opt.full_analysis) {
-			return this._detector(data, callback);
-		}
 
 		if (this.rounds === 0 && this.found === false) {
 			if(! this.sms_emitted) {
@@ -49,10 +43,17 @@ module.exports = class StreamTypeTransform extends Transform {
 		return this._detector(data, callback);
 	}
 
+	/**
+	 * detect mime type
+	 * @param data
+	 * @param cb
+	 * @private
+	 */
 	_detector(data, cb){
 		try {
 			const type = fileType(this.buffer.fill(data));
-			if (type) this.sms.emit('mime', type);
+			debug('mime:', type, 'rounds:', this.rounds);
+			if (type || this.rounds <= 0) this.sms.emit('mime', type);
 			cb(null, data);
 		} catch (e) {
 			cb(null, data)

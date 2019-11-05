@@ -1,137 +1,254 @@
-const path = require('path');
-const uuid = require('uuid/v1');
 const fs = require('fs');
-const Helper = require('../lib/helper');
-const Busboy = require('busboy');
-const DetectorTimeout = require('../detector-timeout');
-const BusFile = require('./busFile');
 const Detector = require('../fileTypeDetector');
+const DetectorTimeout = require('../detector-timeout');
 const FileExtensions = require('../file-extensions');
 const {Base64Decode} = require('base64-stream');
-
-const debug = require('debug')('cryptoBus:upload');
+const debug = require('debug')('cryptoBus:busFile');
 const debug_mode = require('debug')('cryptoBus:mode');
 const debug_bus = require('debug')('cryptoBus:busboy');
 const debug_bus_finish = require('debug')('cryptoBus:busboy:finish');
 const debug_mime = require('debug')('cryptoBus:mime');
+const debug_bfile = require('debug')('cryptoBus:onFile');
+const File = require('./file');
 
 module.exports = class BusFile {
 
-    constructor(file, filename, fieldname, folder, crypto_mode, detector_mode) {
-        this.file = file;
+    constructor(opt, crypto_mode, detector_mode, cipher) {
+        this.opt = Object.assign({}, opt);
+        this.response = {
+            files: [],
+            fields: [],
+            errors: [],
+            warnings: [],
+        };
+        this.filesToDisk = [];
         this.crypto_mode = crypto_mode;
         this.detector_mode = detector_mode;
-        this.detector_finished = false;
-        this.filename = filename;
-        this.newname = BusFile.generateNewFileName(this.crypto_mode);
-        this.fieldname = fieldname;
-        this.ext = BusFile.setExtension(filename);
-        this.folder = folder;
+        this.folder = this._getCryptoBusDestination(this.opt);
         this.error = null;
-        this.writeable = Helper.is_writeStream(this.folder) ?
-            this.folder.createWriteStream(this.fullName()) :
-            fs.createWriteStream(this.fullPath());
+        this.detectorTimeout = new DetectorTimeout(opt);
+        this.cipher = cipher;
+        //debug('BUS-FILE CLASS' , this)
     }
 
-    start(){
+    /**
+     * field event callback
+     *
+     * @return {Function}
+     * @private
+     */
+    _field_cb() {
+        return (fieldname, val) => {
+            debug_bus('BusBoy ON FIELD, ', fieldname, val);
+            if (fieldname === 'Content-Type') return;
+            this.response.fields.push({[fieldname]: val});
+        }
+    };
+
+    /**
+     * limits event callback
+     *
+     * @return {Function}
+     * @private
+     */
+    _filesLimit_cb() {
+        return () => {
+            debug_bus('MAX FILES REACHED, LIMIT IS: ', this.opt.limits.files);
+            this.response.warnings.push(`MAX FILES REACHED, LIMIT IS ${this.opt.limits.files} FILES`);
+        }
+    };
+
+    /**
+     * BusBoy Error event callback
+     *
+     * @return {Function}
+     * @private
+     */
+    _bb_error_cb(resolve) {
+        return (e) => {
+            debug_bus('busboy Error', e);
+            this.response.errors.push(e.message);
+
+            //this.detectorTimeout.clearDetector();
+            //BusFile._removeListeners(this.busBoy);
+            this.filesToDisk.forEach(failed => {
+                BusFile._deleteFailed(failed);
+            });
+            return this._return(resolve);
+            //close all stream chained pipes to busboy file
+        }
+    };
+
+    /**
+     * return Promise with errors, warnings, files uploaded
+     *
+     * @private
+     */
+    _return(resolve) {
+        debug_bus_finish('BusFile finish with response -> ', this.response);
+        return resolve(this.response);
+    }
+
+    /**
+     * detector timeOut callback
+     *
+     * @param reject
+     * @return {function(*=): *}
+     * @private
+     */
+    _detector_timeout(reject) {
+        return (err) => {
+            if (!err) return;
+            debug_mime('TIMEOUT DELETE ALL FAILED', this.filesToDisk);
+            this.filesToDisk.forEach(failed => {
+                BusFile._deleteFailed(failed);
+            });
+            return reject(err);
+        }
+    };
+
+    /**
+     * Delete failed Files
+     *
+     * @param {*} file
+     * @private
+     */
+    static _deleteFailed(file) {
+        debug('deleteFailed -> DELETING FILE -> ', file);
+        fs.unlink(file, (err) => {
+            if (err) {
+                if (process.env.NODE_ENV === 'test') return;
+                console.error(err);
+            }
+        });
+    }
+
+    start(req, busBoy, folder) {
         return new Promise((resolve, reject) => {
-            this.busBoy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
+
+            debug_bus('Start Busboy Core');
+            debug_bus('Folder', folder);
+            this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
+            /* busboy events **/
+            busBoy
+                .on('field', this._field_cb())
+                .on('filesLimit', this._filesLimit_cb())
+                .on('error', this._bb_error_cb(resolve))
+                .on('finish', () => {
+                    debug_bus('busboy finish parsing form!');
+                    this.busboy_finished = true;
+                });
+
+            /* pipe request to busboy through detectorTimeout **/
+            req
+                .pipe(this.detectorTimeout)
+                .pipe(busBoy)
+                .on('error', reject)
+                .on('finish', () => {
+                    this.detectorTimeout.clearDetector();
+                    debug_bus_finish('FINISH REQUEST');
+                });
+
+            busBoy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
                 debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
-                let cipher, detector, folder;
-
+                let cipher, detector;
                 /* on file new busFile **/
-                const busFile = new BusFile(
-                    file,
+                const bfile = new File(
                     filename,
                     fieldname,
-                    folder = this._getCryptoBusDestination(opt),
-                    this._crypto_mode,
-                    this._detection_mode
+                    folder,
+                    this.crypto_mode,
+                    this.detector_mode
                 );
 
-                /* store in temp array file path **/
-                this.filesToDisk.push(busFile.fullPath());
+                this.filesToDisk.push(bfile.fullPath());
 
                 /* fs writeableStream events **/
-                busFile.writeable
-                    .on('finish', this._writeable_finish_cb(busFile, resolve)) //TODO
-                    .on('error', e => reject(e));
+                // check if detector has finished
+                // if not we have to wait
+                bfile.writeable
+                    .on('finish', () => {
+                            if (this.busboy_finished) {
+                                    //BusFile._removeListeners(bfile.writeable);
+                                    //BusFile._removeListeners(bfile.file);
+                                    return this._return(resolve);
+                            }
+                    }).on('error', e => reject(e));
 
                 /* cipher file ? **/
                 if (this.crypto_mode) cipher = await this._getCipher();
 
                 /* detector **/
-                if (this._detection_mode) {
+                if (this.detector_mode) {
                     detector = this._getDetector();
                     detector
                         .detect() //TODO this finish after busFile.writeable.on-finish so error arise
-                        .then(this._detector_type(busFile, resolve))
-                        .catch(this._detector_type_err);
+                        .then(this._detector_type(file, bfile, resolve))
+                        .catch(e => reject(e));
                 }
 
                 /* busboy file events **/
-                busFile.file
-                    .on('limit', this._file_limit(busFile, resolve))
-                    .on('error', this._file_err(busFile, reject))
-                    .on('end', this._file_end(busFile));
+                file
+                    .on('limit', this._file_limit(bfile, file, resolve))
+                    .on('error', this._file_err(bfile, reject))
+                    .on('end', this._file_end(bfile));
 
                 /* pipe **/
-                if (this._detection_mode && this._crypto_mode) {
+                if (this.detector_mode && this.crypto_mode) {
                     debug_mode('DETECTION MODE && CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        busFile.file
+                        file
                             .pipe(new Base64Decode())
                             .pipe(detector.stream())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
                     else
-                        busFile.file
+                        file
                             .pipe(detector.stream())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
 
-                } else if (!this._detection_mode && this._crypto_mode) {
+                } else if (!this.detector_mode && this.crypto_mode) {
                     debug_mode('NO DETECTION MODE && CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        busFile.file
+                        file
                             .pipe(new Base64Decode())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
                     else
-                        busFile.file
+                        file
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
 
-                } else if (this._detection_mode && !this._crypto_mode) {
+                } else if (this.detector_mode && !this.crypto_mode) {
                     debug_mode('DETECTION MODE && NO CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        busFile.file
+                        file
                             .pipe(new Base64Decode())
                             .pipe(detector.stream())
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
                     else
-                        busFile.file
+                        file
                             .pipe(detector.stream())
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
 
                 } else if (!this.detector_mode && !this.crypto_mode) {
                     debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        busFile.file
+                        file
                             .pipe(new Base64Decode())
-                            .pipe(busFile.writeable);
+                            .pipe(bfile.writeable);
                     else
-                        busFile.file
-                            .pipe(busFile.writeable);
+                        file.pipe(bfile.writeable);
                 }
             });
         });
@@ -147,74 +264,6 @@ module.exports = class BusFile {
         return new Detector;
     }
 
-    fullName() {
-        return `${this.newname}.${this.ext}`
-    }
-
-    fullPath() {
-        if(typeof this.folder === 'string')
-            return path.join(this.folder, this.fullName());
-
-
-        return (this.get_folder()).replace(/\/$/,'') + '/' + this.fullName();
-    }
-
-    get_folder(){
-        if(typeof this.folder === 'string')
-            return this.folder;
-
-        if(Helper.is_writeStream(this.folder))
-            if(this.folder.path) return this.folder.path;
-
-            return 'stream://';
-    }
-
-    toJson() {
-        return {
-            filename: this.filename,
-            fullname: this.fullName(),
-            newname: this.newname,
-            fieldname: this.fieldname,
-            ext: this.ext,
-            folder: this.get_folder(),
-            fullPath: this.fullPath(),
-            error: this.error
-        }
-    }
-
-    /**
-     * Generate new uuid/v1 file name based on crypto_mode
-     *
-     * @param crypto_mode {boolean}
-     * @return {string}
-     */
-    static generateNewFileName(crypto_mode){
-        if(crypto_mode)
-            return `${uuid()}-ciphered`;
-        return uuid();
-    }
-
-    /**
-     * splitNameToExtension
-     * foo.jpg -> .jpg
-     * foo -> .filext
-     * @param {*} filename
-     */
-    static setExtension(filename){
-        const ext = path.extname(filename || '').split('.');
-        return ext[ext.length - 1] === '' ? 'filext' : ext[ext.length - 1];
-    }
-
-    /**
-     * detector error event callback
-     *
-     * @param e
-     * @return {Promise<never>}
-     * @private
-     */
-    _detector_type_err(e) {
-        return Promise.reject(e)
-    };
 
     /**
      * busFile.file limit bytes event callback
@@ -224,14 +273,14 @@ module.exports = class BusFile {
      * @return {Function}
      * @private
      */
-    _file_limit(busFile, resolve) {
+    _file_limit(busFile, file, resolve) {
         return () => {
             debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${busFile.filename}`);
             busFile.error = `BYTES LIMIT EXCEEDED, limit ${this.opt.limits.fileSize} bytes`;
-            busFile.file.resume(); //fires finish
+            file.resume(); //fires finish
             BusFile._deleteFailed(busFile.fullPath());
             if (this.busboy_finished)
-                return this._closeReq(resolve);
+                return this._return(resolve);
         }
     };
 
@@ -252,36 +301,7 @@ module.exports = class BusFile {
         }
     };
 
-    /**
-     * fs writeableStream finish event callback
-     *
-     * @param busFile
-     * @param resolve
-     * @return {Function}
-     * @private
-     */
-    _writeable_finish_cb(busFile, resolve) {
-        return () => {
-            debug_bus_finish(`_writeable_finish_cb busboy | busboy finished? ${this.busboy_finished}`);
-            debug_bus_finish(`_writeable_finish_cb busboy | DETECTION finished? ${this.detector_finished}`);
-            if (busFile.detector_mode && !this.detector_finished) {
-                console.log('Detector mode ON, detector NOT finished ', busFile);
-                return;
-            }
-            if (this.busboy_finished) {
-                process.nextTick(() => {
-                    Upload._removeListeners(busFile.writeable);
-                    Upload._removeListeners(busFile.file);
-                    return this._closeReq(resolve);
-                })
-            } /*else {
-                process.nextTick(() => {
-                    debug_bus('_writeable_finish_cb busboy not finished NEXTTICK');
-                    return this._writeable_finish_cb(busFile, resolve)();
-                })
-            }*/
-        }
-    };
+
 
     /**
      * detector type event callback
@@ -291,22 +311,18 @@ module.exports = class BusFile {
      * @return {Function}
      * @private
      */
-    _detector_type(busFile, resolve) {
+    _detector_type(file, bfile, resolve) {
         return (type) => {
-            this.detector_finished = true;
             if (!type || !this._allowedExtensions(type.ext)) {
-                busFile.error = `EXTENSION NOT ALLOWED ${busFile.ext}`;
-                debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${busFile.ext}`);
-                process.nextTick(() => {
-                    busFile.file.resume();
-                    Upload._deleteFailed(busFile.fullPath());
-                    if (this.busboy_finished)
-                        return this._closeReq(resolve);
-                });
+                bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
+                debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
+                file.resume();
+                BusFile._deleteFailed(bfile.fullPath());
+                if (this.busboy_finished)
+                    return this._return(resolve);
             }
         }
     };
-
 
 
     /**
@@ -318,7 +334,7 @@ module.exports = class BusFile {
      */
     _file_end(busFile) {
         return () => {
-            this.files.push(busFile.toJson());
+            this.response.files.push(busFile.toJson());
             debug_bus(`File ON END [ ${busFile.filename} ] Finished`);
         }
     };

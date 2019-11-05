@@ -43,31 +43,19 @@ module.exports = class Upload {
 
             this.busBoy = this._getBusBoy(req, opt);
 
-            debug_bus('Start Busboy Core');
-            this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
-
             /* start busboy file listener **/
 
-            const busFile = new BusFile()
-            this._bus_on_file(opt).then(res => {
-                console.log('weeeeeeeeeeeeeeee', res);
-                this._closeReq(resolve);
-            }).catch(e => console.log('ERRORRRRRRRRRRRRRRRRRRRRRRRRRRRRRR', e))
+            const busFile = new BusFile(this.opt, this._crypto_mode, this._detection_mode, this.cipher);
 
+            busFile.start(req, this.busBoy, this.opt.dest)
+                .then(res => {
+                //console.log('response', res);
+                resolve(this._closeReq(res));
+            }).catch(e => {
+                debug('start error', e);
+                reject(e)
+            })
 
-            /* busboy events **/
-            this.busBoy
-                .on('field', this._field_cb())
-                .on('filesLimit', this._filesLimit_cb())
-                .on('error', this._bb_error_cb(resolve, req))
-                .on('finish', this._finish_bb_cb());
-
-            /* pipe request to busboy through detectorTimeout **/
-            req
-                .pipe(this.detectorTimeout)
-                .pipe(this.busBoy)
-                .on('error', reject)
-                .on('finish', this._req_finish())
         })
     }
 
@@ -106,101 +94,6 @@ module.exports = class Upload {
     }
 
 
-    /**
-     * request finish event callback
-     *
-     * @return {Function}
-     * @private
-     */
-    _req_finish() {
-        return () => {
-            debug('FINISH REQUEST');
-            //Upload._removeListeners(this.busBoy);
-            this.detectorTimeout.clearDetector();
-            this.req_finished = true;
-        }
-    };
-
-    /**
-     * field event callback
-     *
-     * @return {Function}
-     * @private
-     */
-    _field_cb() {
-        return (fieldname, val) => {
-            debug_bus('BusBoy ON FIELD, ', fieldname, val);
-            if (fieldname === 'Content-Type') return;
-            this.fields.push({[fieldname]: val});
-        }
-    };
-
-    /**
-     * limits event callback
-     *
-     * @return {Function}
-     * @private
-     */
-    _filesLimit_cb() {
-        return () => {
-            debug_bus('MAX FILES REACHED, LIMIT IS: ', this.opt.limits.files);
-            this.warnings.push(`MAX FILES REACHED, LIMIT IS ${this.opt.limits.files} FILES`);
-        }
-    };
-
-    /**
-     * BusBoy finish event callback
-     *
-     * @param f
-     * @return {Function}
-     * @private
-     */
-    _finish_bb_cb(f) {
-        return () => {
-            debug_bus('busboy finish parsing form!');
-            this.busboy_finished = true;
-        }
-    };
-
-    /**
-     * BusBoy Error event callback
-     *
-     * @return {Function}
-     * @private
-     */
-    _bb_error_cb(resolve, req) {
-        return (e) => {
-            debug_bus('busboy Error', e);
-            this.errors.push(e.message);
-
-            this.detectorTimeout.clearDetector();
-            Upload._removeListeners(this.busBoy);
-            this.filesToDisk.forEach(failed => {
-                Upload._deleteFailed(failed);
-            });
-            return this._closeReq(resolve);
-            //close all stream chained pipes to busboy file
-        }
-    };
-
-    /**
-     * detector timeOut callback
-     *
-     * @param reject
-     * @return {function(*=): *}
-     * @private
-     */
-    _detector_timeout(reject) {
-        return (err) => {
-            if (!err) return;
-            debug('TIMEOUT DELETE ALL FAILED', this.filesToDisk);
-            this.filesToDisk.forEach(failed => {
-                Upload._deleteFailed(failed);
-            });
-            return reject(err);
-        }
-    };
-
 
 
     /**
@@ -236,23 +129,20 @@ module.exports = class Upload {
      *
      * @private
      */
-    _closeReq(resolve) {
-        debug('closereq Warnings -> ', JSON.stringify(this.warnings));
-        debug('closereq Errors -> ', JSON.stringify(this.errors));
-        debug('closereq Fields -> ', JSON.stringify(this.fields));
-        debug('closereq Files -> ', JSON.stringify(this.files));
+    _closeReq(response) {
+        debug('closereq Warnings -> ', response);
 
-        const uploads = this.files.filter(f => f.error === null);
-        const wrong = this.files.filter(f => f.error !== null);
+        const uploads = response.files.filter(f => f.error === null);
+        const wrong = response.files.filter(f => f.error !== null);
 
-        debug('WRONG', [...this.errors, ...wrong]);
+        debug('WRONG', [...response.errors, ...wrong]);
 
-        return resolve({
-            warnings: this.warnings,
-            errors: [...this.errors, ...wrong],
+        return {
+            warnings: response.warnings,
+            errors: [...response.errors, ...wrong],
             files: uploads,
-            fields: this.fields
-        })
+            fields: response.fields
+        }
     }
 
 };
