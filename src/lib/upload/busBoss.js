@@ -11,7 +11,7 @@ const debug_mime = require('debug')('cryptoBus:mime');
 const debug_bfile = require('debug')('cryptoBus:onFile');
 const File = require('./file');
 
-module.exports = class BusFile {
+module.exports = class BusBoss {
 
     constructor(opt, crypto_mode, detector_mode, cipher) {
         this.opt = Object.assign({}, opt);
@@ -45,18 +45,6 @@ module.exports = class BusFile {
         }
     };
 
-    /**
-     * limits event callback
-     *
-     * @return {Function}
-     * @private
-     */
-    _filesLimit_cb() {
-        return () => {
-            debug_bus('MAX FILES REACHED, LIMIT IS: ', this.opt.limits.files);
-            this.response.warnings.push(`MAX FILES REACHED, LIMIT IS ${this.opt.limits.files} FILES`);
-        }
-    };
 
     /**
      * BusBoy Error event callback
@@ -64,15 +52,15 @@ module.exports = class BusFile {
      * @return {Function}
      * @private
      */
-    _bb_error_cb(resolve) {
+    _bb_error(resolve) {
         return (e) => {
             debug_bus('busboy Error', e);
             this.response.errors.push(e.message);
 
             //this.detectorTimeout.clearDetector();
-            //BusFile._removeListeners(this.busBoy);
+            //BusBoss._removeListeners(this.busBoy);
             this.filesToDisk.forEach(failed => {
-                BusFile._deleteFailed(failed);
+                BusBoss._deleteFailed(failed);
             });
             return this._return(resolve);
             //close all stream chained pipes to busboy file
@@ -85,7 +73,7 @@ module.exports = class BusFile {
      * @private
      */
     _return(resolve) {
-        debug_bus_finish('BusFile finish with response -> ', this.response);
+        debug_bus_finish('BusBoss finish with response -> ', this.response);
         return resolve(this.response);
     }
 
@@ -101,7 +89,7 @@ module.exports = class BusFile {
             if (!err) return;
             debug_mime('TIMEOUT DELETE ALL FAILED', this.filesToDisk);
             this.filesToDisk.forEach(failed => {
-                BusFile._deleteFailed(failed);
+                BusBoss._deleteFailed(failed);
             });
             return reject(err);
         }
@@ -132,8 +120,11 @@ module.exports = class BusFile {
             /* busboy events **/
             busBoy
                 .on('field', this._field_cb())
-                .on('filesLimit', this._filesLimit_cb())
-                .on('error', this._bb_error_cb(resolve))
+                .on('filesLimit', () => {
+                    debug_bus('MAX FILES REACHED, LIMIT IS: ', this.opt.limits.files);
+                    this.response.warnings.push(`MAX FILES REACHED, LIMIT IS ${this.opt.limits.files} FILES`);
+                })
+                .on('error', this._bb_error(resolve))
                 .on('finish', () => {
                     debug_bus('busboy finish parsing form!');
                     this.busboy_finished = true;
@@ -170,8 +161,8 @@ module.exports = class BusFile {
                 bfile.writeable
                     .on('finish', () => {
                             if (this.busboy_finished) {
-                                    //BusFile._removeListeners(bfile.writeable);
-                                    //BusFile._removeListeners(bfile.file);
+                                    //BusBoss._removeListeners(bfile.writeable);
+                                    //BusBoss._removeListeners(bfile.file);
                                     return this._return(resolve);
                             }
                     }).on('error', e => reject(e));
@@ -278,7 +269,7 @@ module.exports = class BusFile {
             debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${busFile.filename}`);
             busFile.error = `BYTES LIMIT EXCEEDED, limit ${this.opt.limits.fileSize} bytes`;
             file.resume(); //fires finish
-            BusFile._deleteFailed(busFile.fullPath());
+            BusBoss._deleteFailed(busFile.fullPath());
             if (this.busboy_finished)
                 return this._return(resolve);
         }
@@ -293,11 +284,11 @@ module.exports = class BusFile {
      * @return {function(*): *}
      * @private
      */
-    _file_err(busFile, reject) {
+    _file_err(bfile, reject) {
         return (e) => {
-            debug_bus(`File ON ERROR [ ${busFile.filename} ] ERROR ->  ${e}`);
-            busFile.error = `BUSBOY ERROR ${e.message}`;
-            return reject(busFile)
+            debug_bus(`File ON ERROR [ ${bfile.filename} ] ERROR ->  ${e}`);
+            bfile.error = `BUSBOY ERROR ${e.message}`;
+            return reject(bfile);
         }
     };
 
@@ -317,7 +308,7 @@ module.exports = class BusFile {
                 bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
                 debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
                 file.resume();
-                BusFile._deleteFailed(bfile.fullPath());
+                BusBoss._deleteFailed(bfile.fullPath());
                 if (this.busboy_finished)
                     return this._return(resolve);
             }

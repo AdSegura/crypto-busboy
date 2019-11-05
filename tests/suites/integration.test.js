@@ -187,7 +187,6 @@ module.exports = function suite(mode) {
     it(`Should Upload file with writeStream destination as option [${mode}]`, async () => {
         const dest =  {
             createWriteStream: (filename) => {
-                console.log('filename', filename);
                 return fs.createWriteStream(path.join(Helper.getUploadServerFolder(), filename))
             }
         };
@@ -204,8 +203,6 @@ module.exports = function suite(mode) {
             .attach('my photo 4', Helper.files().f4)
             .field("avatar", "true");
 
-
-        console.log(res.body);
         res.should.have.status(200);
         res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f4'));
         res.body.files[0].should.have.property('error').eql(null);
@@ -246,7 +243,6 @@ module.exports = function suite(mode) {
 
         if(res.status !== 400) {
             console.log('response', res.res.text);
-            console.log('agent', agent);
             console.log('upload_opt', upload_options);
         }
 

@@ -4,12 +4,53 @@ const debug = require('debug')('cryptoBus:upload');
 const MimeStream = require("mime-stream");
 const makeFolder = require('../fs/index');
 const CryptoBusError = require('./crypto-busboy-error');
-const Base = require('./base');
+const FileExtensions = require('./file-extensions');
+const Upload = require('./upload');
+const Cryptonite = require('../crypto/cryptonite');
+const os = require('os');
+const Helper = require('./lib/helper');
 
-module.exports = class CryptoBusBoy extends Base {
+module.exports = class CryptoBusBoy {
 
     constructor(opt, upload) {
-        super(opt, upload);
+        this.options = opt || {};
+        this._crypto_mode = false;
+        this._detection_mode = false;
+        this.cipher = null;
+        this.options.dest = this.options.dest || os.tmpdir();
+
+        this.checkDestinationFolder();
+        this.options.limits = this.options.limits || {};
+
+        if (this.options.limits && this.options.limits.hasOwnProperty('allowed')){
+            this.options.limits.allowed = FileExtensions.normalizeExtensions(opt.limits.allowed);
+            this._detection_mode = true;
+        }
+
+        if(this.options.key) {
+            const cryptoOpt = {key: this.options.key};
+            if(this.options.alg) cryptoOpt.alg = this.options.alg;
+
+            this.cipher = new Cryptonite(cryptoOpt);
+            this._crypto_mode = true;
+        }
+
+        this.Upload = upload || Upload;
+    }
+
+    /**
+     * Check if Dir is writable.
+     */
+    checkDestinationFolder(folder) {
+        folder = folder || this.options.dest;
+
+        if(Helper.is_writeStream(folder)) return;
+
+        try {
+            return fs.accessSync(folder, fs.constants.W_OK)
+        }catch (e) {
+            throw new CryptoBusError(e);
+        }
     }
 
     /**
@@ -63,13 +104,13 @@ module.exports = class CryptoBusBoy extends Base {
      *  }}
      *
      * @param {*} req
-     * @param opt [optional] {dest, perms}
+     * @param opt [optional] {dest}
      */
     processRequestFiles(req, opt) {
         // One important caveat is that if the Readable stream emits an error during processing,
         // the Writable destination is not closed automatically.
         // If an error occurs, it will be necessary to manually close each stream in order to prevent memory leaks.
-        debug('processRequestFiles');
+        debug('Start processing Request Files');
 
         const errors = CryptoBusBoy.checkHeaders(req);
         if(errors !== true)
