@@ -1,6 +1,6 @@
 {
   "name": "crypto-busboy",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "busboy upload with encryption option",
   "main": "src/index.js",
   "scripts": {

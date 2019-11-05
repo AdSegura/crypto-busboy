@@ -44,8 +44,10 @@ describe('Test crypto-busboy module errors',
     errors_suite.bind(this, CryptoBusBoy));
 describe('Test Integration Upload/Download Crypto Mode within expressJS',
     integration_suite.bind(this, 'crypto'));
+
 describe('Test Integration Upload/Download No Crypto Mode within expressJS',
     integration_suite.bind(this, 'no_crypto'));
+
 describe('Test Integration Upload/Download Big File Crypto Mode within expressJS',
     integration_big_file_suite.bind(this, 'crypto', size));
 describe('Test Integration Upload/Download Big File No Crypto Mode within expressJS',
@@ -58,3 +60,4 @@ describe('Test FileType Detector Stream',
     detector_suite.bind(this, Detector));
 describe('Test timeout Detector Stream',
     timeout_suite.bind(this, DetectorTimeOut));
+

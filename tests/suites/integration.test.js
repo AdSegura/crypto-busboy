@@ -7,6 +7,7 @@ const fs = require('fs');
 const md5 = require("md5");
 const {binaryParser} = require('../lib/binaryParser');
 const Helper = require('../lib/helper');
+const path = require('path');
 
 module.exports = function suite(mode) {
 
@@ -99,6 +100,7 @@ module.exports = function suite(mode) {
                 .attach('my photo 5', Helper.files().f5);
 
             //console.log(res)
+            if(res.status !== 429) console.log(res.body);
             res.should.have.status(429);
             expect(res.body.files.length).eq(2);
             expect(file_names.includes(res.body.files[0].filename)).eq(true);
@@ -112,7 +114,7 @@ module.exports = function suite(mode) {
             fileUploaded2 = res.body.files[1].fullname;
             fileUploaded1_real_name = res.body.files[0].filename.split('.')[0];
             fileUploaded2_real_name = res.body.files[1].filename.split('.')[0];
-        });
+        }).timeout(5000)
 
 
         it(`Should Download two files previously uploaded mode [${mode}] and MD5 check`, async () => {
@@ -182,6 +184,31 @@ module.exports = function suite(mode) {
         res.body.fields[0].should.have.property('avatar').eql("true");
     });
 
+    it(`Should Upload file with writeStream destination as option [${mode}]`, async () => {
+        const dest =  {
+            createWriteStream: (filename) => {
+                return fs.createWriteStream(path.join(Helper.getUploadServerFolder(), filename))
+            }
+        };
+
+        const upload_options = {dest};
+
+        if (mode === 'crypto')
+            upload_options.key = 'super-password';
+
+        const agent = Helper.factoryAgent(upload_options);
+
+        const res = await agent
+            .post(Helper.urls().upload)
+            .attach('my photo 4', Helper.files().f4)
+            .field("avatar", "true");
+
+        res.should.have.status(200);
+        res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f4'));
+        res.body.files[0].should.have.property('error').eql(null);
+        res.body.fields[0].should.have.property('avatar').eql("true");
+    });
+
     it('Should FAIL upload Xsl/Access files', async () => {
         const agent = Helper.factoryAgent(upload_options);
         const res = await agent
@@ -214,8 +241,10 @@ module.exports = function suite(mode) {
             .post(Helper.urls().upload)
             .attach('my zip', Helper.files().f1zip);
 
-        if(res.status !== 400)
-            console.log(res.res.text);
+        if(res.status !== 400) {
+            console.log('response', res.res.text);
+            console.log('upload_opt', upload_options);
+        }
 
         res.should.have.status(400);
         res.body.errors[0].should.have.property('filename').eql(Helper.getFileName('f1zip'));

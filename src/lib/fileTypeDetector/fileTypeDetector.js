@@ -17,7 +17,7 @@ module.exports = class FileTypeDetector {
         return new Promise((resolve, reject) => {
 
             this.detector.sms.once('mime', (type) => {
-                debug('found type', type.ext);
+                debug('found type', type);
                 //this.detector.removeAllListeners();
                 return resolve(type)
             });
@@ -28,8 +28,8 @@ module.exports = class FileTypeDetector {
                 return resolve()
             });
 
-            this.detector.once('finish', () => {
-                debug('stream finish');
+            this.detector.once('end', () => {
+                debug('on END detector');
                 //this.detector.removeAllListeners();
                 return resolve();
             });

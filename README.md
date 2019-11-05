@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.org/AdSegura/crypto-busboy.svg?branch=master)](https://travis-ci.org/AdSegura/crypto-busboy)
 [![node version](https://badgen.net/badge/node/%3E=10.16.3/green)](https://badgen.net/badge/node/%3E=10.16.3/green)
 [![npm version](https://badge.fury.io/js/crypto-busboy.svg)](https://badge.fury.io/js/crypto-busboy)
+# ALPHA RELEASE not for prod.
 
-# NOT FOR PRODUCTION, FOUND BUGS!
 # crypto-busboy
 Upload and download files from nodejs using streams.
 
