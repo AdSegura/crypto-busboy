@@ -12,4 +12,11 @@ module.exports = class Helper {
 
         return false;
     }
+
+    static remlisteners(ee){
+        const events = ee.eventNames();
+        for(let i = 0; i <= events.length; i++){
+            ee.removeAllListeners(events[i]);
+        }
+    }
 };

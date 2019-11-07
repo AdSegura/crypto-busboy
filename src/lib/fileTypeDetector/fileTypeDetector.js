@@ -1,5 +1,6 @@
 const TypeDetectorStream = require('./typeDetectorStream');
 const debug = require('debug')('cryptoBus:detector');
+const Helper = require('../lib/helper');
 
 module.exports = class FileTypeDetector {
 
@@ -18,37 +19,30 @@ module.exports = class FileTypeDetector {
 
             this.detector.sms.once('mime', (type) => {
                 debug('found type', type);
-                //this.detector.removeAllListeners();
+                Helper.remlisteners(this.detector.sms);
                 return resolve(type)
             });
 
             this.detector.sms.once('not_found', () => {
                 debug('not_found');
-                //this.detector.removeAllListeners();
+                Helper.remlisteners(this.detector.sms);
                 return resolve()
             });
 
             this.detector.once('end', () => {
                 debug('on END detector');
-                //this.detector.removeAllListeners();
+                Helper.remlisteners(this.detector);
                 return resolve();
             });
 
             this.detector.once('error', (e) => {
                 debug('error ', e);
-                //this.detector.removeAllListeners();
+                Helper.remlisteners(this.detector);
                 reject(e);
             });
-            /*this.detector.sms
-                .once('mime', resolve)
-                .once('not_found', reject);
 
-            this.detector
-                .once('finish', resolve)
-                .once('error', reject);*/
         })
     }
-
 
     /**
      * detector stream transform
@@ -58,4 +52,5 @@ module.exports = class FileTypeDetector {
     stream() {
         return this.detector;
     }
+
 };

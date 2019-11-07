@@ -57,7 +57,7 @@ module.exports = class BusBoss {
             debug_bus('busboy Error', e);
             this.response.errors.push(e.message);
 
-            //this.detectorTimeout.clearDetector();
+            this.detectorTimeout.clearDetector();
             //BusBoss._removeListeners(this.busBoy);
             this.filesToDisk.forEach(failed => {
                 BusBoss._deleteFailed(failed);
@@ -111,6 +111,7 @@ module.exports = class BusBoss {
         });
     }
 
+
     start(req, busBoy, folder) {
         return new Promise((resolve, reject) => {
 
@@ -146,8 +147,11 @@ module.exports = class BusBoss {
                 let cipher, detector;
                 /* on file new busFile **/
                 const bfile = new File(
-                    filename,
                     fieldname,
+                    file,
+                    filename,
+                    encoding,
+                    mimetype,
                     folder,
                     this.crypto_mode,
                     this.detector_mode
@@ -159,13 +163,14 @@ module.exports = class BusBoss {
                 // check if detector has finished
                 // if not we have to wait
                 bfile.writeable
-                    .on('finish', () => {
-                            if (this.busboy_finished) {
-                                    //BusBoss._removeListeners(bfile.writeable);
-                                    //BusBoss._removeListeners(bfile.file);
-                                    return this._return(resolve);
+                    .once('finish', () => {
+                        process.nextTick(() => {
+                            bfile.remListeners();
+                            if (this.busboy_finished){
+                                return this._return(resolve);
                             }
-                    }).on('error', e => reject(e));
+                        });
+                    }).once('error', e => reject(e));
 
                 /* cipher file ? **/
                 if (this.crypto_mode) cipher = await this._getCipher();
@@ -175,29 +180,29 @@ module.exports = class BusBoss {
                     detector = this._getDetector();
                     detector
                         .detect() //TODO this finish after busFile.writeable.on-finish so error arise
-                        .then(this._detector_type(file, bfile, resolve))
+                        .then(this._detector_type(bfile, resolve))
                         .catch(e => reject(e));
                 }
 
                 /* busboy file events **/
-                file
-                    .on('limit', this._file_limit(bfile, file, resolve))
-                    .on('error', this._file_err(bfile, reject))
-                    .on('end', this._file_end(bfile));
+                bfile.file
+                    .once('limit', this._file_limit(bfile, resolve))
+                    .once('error', this._file_err(bfile, reject))
+                    .once('end', this._file_end(bfile));
 
                 /* pipe **/
                 if (this.detector_mode && this.crypto_mode) {
                     debug_mode('DETECTION MODE && CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        file
+                        bfile.file
                             .pipe(new Base64Decode())
                             .pipe(detector.stream())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
                             .pipe(bfile.writeable);
                     else
-                        file
+                        bfile.file
                             .pipe(detector.stream())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
@@ -207,13 +212,13 @@ module.exports = class BusBoss {
                     debug_mode('NO DETECTION MODE && CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        file
+                        bfile.file
                             .pipe(new Base64Decode())
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
                             .pipe(bfile.writeable);
                     else
-                        file
+                        bfile.file
                             .pipe(cipher.cipherStream)
                             .pipe(cipher.cipherStreamIV)
                             .pipe(bfile.writeable);
@@ -222,12 +227,12 @@ module.exports = class BusBoss {
                     debug_mode('DETECTION MODE && NO CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        file
+                        bfile.file
                             .pipe(new Base64Decode())
                             .pipe(detector.stream())
                             .pipe(bfile.writeable);
                     else
-                        file
+                        bfile.file
                             .pipe(detector.stream())
                             .pipe(bfile.writeable);
 
@@ -235,11 +240,11 @@ module.exports = class BusBoss {
                     debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
 
                     if (encoding === 'base64')
-                        file
+                        bfile.file
                             .pipe(new Base64Decode())
                             .pipe(bfile.writeable);
                     else
-                        file.pipe(bfile.writeable);
+                        bfile.file.pipe(bfile.writeable);
                 }
             });
         });
@@ -259,17 +264,17 @@ module.exports = class BusBoss {
     /**
      * busFile.file limit bytes event callback
      *
-     * @param busFile
+     * @param bfile
      * @param resolve
      * @return {Function}
      * @private
      */
-    _file_limit(busFile, file, resolve) {
+    _file_limit(bfile, resolve) {
         return () => {
-            debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${busFile.filename}`);
-            busFile.error = `BYTES LIMIT EXCEEDED, limit ${this.opt.limits.fileSize} bytes`;
-            file.resume(); //fires finish
-            BusBoss._deleteFailed(busFile.fullPath());
+            debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${bfile.filename}`);
+            bfile.error = `BYTES LIMIT EXCEEDED, limit ${this.opt.limits.fileSize} bytes`;
+            bfile.file.resume(); //fires finish
+            BusBoss._deleteFailed(bfile.fullPath());
             if (this.busboy_finished)
                 return this._return(resolve);
         }
@@ -297,17 +302,17 @@ module.exports = class BusBoss {
     /**
      * detector type event callback
      *
-     * @param busFile
+     * @param bfile
      * @param resolve
      * @return {Function}
      * @private
      */
-    _detector_type(file, bfile, resolve) {
+    _detector_type(bfile, resolve) {
         return (type) => {
             if (!type || !this._allowedExtensions(type.ext)) {
                 bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
                 debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
-                file.resume();
+                bfile.file.resume();
                 BusBoss._deleteFailed(bfile.fullPath());
                 if (this.busboy_finished)
                     return this._return(resolve);

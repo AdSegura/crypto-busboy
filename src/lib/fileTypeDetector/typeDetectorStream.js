@@ -59,4 +59,5 @@ module.exports = class StreamTypeTransform extends Transform {
 			cb(null, data)
 		}
 	}
+
 };

@@ -6,7 +6,8 @@ const debug = require('debug')('cryptoBus:file');
 
 
 module.exports = class File {
-    constructor(filename, fieldname, folder, crypto_mode, detector_mode){
+    constructor(fieldname, file, filename, encoding, mimetype, folder, crypto_mode, detector_mode){
+        this.file = file;
         this.filename = filename;
         this.fieldname = fieldname;
         this.folder = folder;
@@ -75,9 +76,13 @@ module.exports = class File {
      * @param {*} filename
      */
     static setExtension(filename) {
-        debug('setExtension', filename)
+        debug('setExtension', filename);
         const ext = path.extname(filename || '').split('.');
         return ext[ext.length - 1] === '' ? 'filext' : ext[ext.length - 1];
     }
 
+    remListeners(){
+        Helper.remlisteners(this.writeable);
+        Helper.remlisteners(this.file);
+    }
 }
