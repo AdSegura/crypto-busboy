@@ -4,13 +4,15 @@ const path = require('path');
 const fs = require('fs');
 const debug = require('debug')('cryptoBus:file');
 
-
 module.exports = class File {
+
     constructor(fieldname, file, filename, encoding, mimetype, folder, crypto_mode, detector_mode){
         this.file = file;
         this.filename = filename;
         this.fieldname = fieldname;
         this.folder = folder;
+        this.encoding = encoding;
+        this.mimetype = mimetype;
         this.ext =  File.setExtension(this.filename);
         this.newname =  File.generateNewFileName(crypto_mode);
         this.error = null;
@@ -22,12 +24,21 @@ module.exports = class File {
         //debug('FILE CLASS' , this)
     }
 
+    /**
+     * toJson
+     *
+     * @return File
+     */
     toJson() {
         return {
             filename: this.filename,
             fullname: this.fullName(),
             newname: this.newname,
             fieldname: this.fieldname,
+            encoding: this.encoding,
+            mimetype: this.mimetype,
+            crypto_mode:this.crypto_mode,
+            detector_mode: this.detector_mode,
             ext: this.ext,
             folder: this.get_folder(),
             fullPath: this.fullPath(),
@@ -35,6 +46,11 @@ module.exports = class File {
         }
     }
 
+    /**
+     * get_folder
+     *
+     * @return {string|*}
+     */
     get_folder() {
         if (typeof this.folder === 'string')
             return this.folder;
@@ -45,14 +61,21 @@ module.exports = class File {
         return 'stream://';
     }
 
+    /**
+     * fullName
+     * @return {string}
+     */
     fullName() {
         return `${this.newname}.${this.ext}`
     }
 
+    /**
+     * fullPath
+     * @return {string}
+     */
     fullPath() {
         if (typeof this.folder === 'string')
             return path.join(this.folder, this.fullName());
-
 
         return (this.get_folder()).replace(/\/$/, '') + '/' + this.fullName();
     }
@@ -81,6 +104,9 @@ module.exports = class File {
         return ext[ext.length - 1] === '' ? 'filext' : ext[ext.length - 1];
     }
 
+    /**
+     * Remove listeners
+     */
     remListeners(){
         Helper.remlisteners(this.writeable);
         Helper.remlisteners(this.file);

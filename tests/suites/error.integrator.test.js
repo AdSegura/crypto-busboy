@@ -34,7 +34,7 @@ module.exports = function suite() {
         expect(req.text).include('no multipart/form-data; header found');
     });
 
-   /* it('Should get an unexpected error', async () => {
+    it('Should get an unexpected error', async () => {
         const mock_it = true;
         const agent = Helper.factoryAgent({
             dest: Helper.getUploadServerFolder(),
@@ -47,7 +47,7 @@ module.exports = function suite() {
         const req = await agent.post(Helper.urls().upload)
             .attach('my', Helper.files().f1);
 
-        expect(req.status).eq(400);
+        expect(req.status).eq(500);
         expect(req.text).include('Mock Error on busboy');
-    })*/
+    })
 };
