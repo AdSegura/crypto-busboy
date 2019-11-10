@@ -70,13 +70,15 @@ module.exports = class BusBoss {
      * @private
      */
     _return(resolve) {
-        if(!this.filesToDisk.some(file => file.finished === false))
-            return resolve(this.response);
-
-        if (this.busboy_finished) {
-            debug_bus_finish('BusBoss finish with response -> ', this.response);
+        if(!this.filesToDisk.some(file => file.finished === false)) {
+            debug_bus_finish('BusBoss finish ALL files finished with response -> ', this.response);
             return resolve(this.response);
         }
+
+        /*if (this.busboy_finished) {
+            debug_bus_finish('BusBoss finish with response -> ', this.response);
+            return resolve(this.response);
+        }*/
     }
 
     /**
@@ -189,10 +191,10 @@ module.exports = class BusBoss {
                     bfile.finished = true;
                     debug_bus_finish('WRITEABLE FINISH', bfile.toJson());
                     this.response.files.push(bfile.toJson());
-                    process.nextTick(() => {
+                    //process.nextTick(() => {
                         bfile.remListeners();
                         return this._return(resolve);
-                    });
+                    //});
                 }).once('error', e => reject(e));
 
             /* cipher file ? **/
@@ -273,7 +275,7 @@ module.exports = class BusBoss {
     typeNotAllowed(bfile, fileTypeStream){
         bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
         debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
-        bfile.file.resume();
+        //bfile.file.resume();
         fileTypeStream.destroy();
         bfile.failed = true;
         bfile.finished = true;
@@ -294,6 +296,8 @@ module.exports = class BusBoss {
         return () => {
             debug_bus(`bytes limit ${this.opt.limits.fileSize} exceeded on File: ${bfile.filename}`);
             bfile.error = `BYTES LIMIT EXCEEDED, limit ${this.opt.limits.fileSize} bytes`;
+            bfile.failed = true;
+            bfile.finished = true;
             bfile.file.resume(); //fires finish
             BusBoss._deleteFailed(bfile.fullPath());
             if (this.busboy_finished)
@@ -313,6 +317,8 @@ module.exports = class BusBoss {
         return (e) => {
             debug_bus(`File ON ERROR [ ${bfile.filename} ] ERROR ->  ${e}`);
             bfile.error = `BUSBOY ERROR ${e.message}`;
+            bfile.failed = true;
+            bfile.finished = true;
             return reject(bfile);
         }
     };

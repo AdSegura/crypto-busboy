@@ -44,7 +44,9 @@ module.exports = class File {
             ext: this.ext,
             folder: this.get_folder(),
             fullPath: this.fullPath(),
-            error: this.error
+            error: this.error,
+            finished: this.finished,
+            failed: this.failed
         }
     }
 
