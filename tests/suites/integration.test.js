@@ -99,7 +99,6 @@ module.exports = function suite(mode) {
                 .attach('my photo 4', Helper.files().f4)
                 .attach('my photo 5', Helper.files().f5);
 
-            console.log(res.body);
             if(res.status !== 429) console.log(res.body);
             res.should.have.status(429);
             expect(res.body.files.length).eq(2);
@@ -148,7 +147,7 @@ module.exports = function suite(mode) {
                 .attach('my photo 3', Helper.files().f3)
                 .attach('my.docx', Helper.files().f2docxZip);
 
-            console.log(res.text);
+
             res.should.have.status(429);
             res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f3'));
             res.body.files[0].should.have.property('error').eql(null);
