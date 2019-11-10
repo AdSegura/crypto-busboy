@@ -67,7 +67,7 @@ function download(dest, port) {
     down
         .dec()
         .then(data => {
-            if(data) return finish(dest, data)
+            if(data) return finish(dest, data);
             Helper.readDir(dest, (e, files) => {
                 console.log('Downloaded ' + files.length + ' files... now testing md5');
                 let i = files.length;
@@ -89,7 +89,7 @@ function finish(dest, data) {
     if(data) console.log(data);
     console.log('\ntest finished with this options:');
     console.table(upload_options);
-    fs.rmdirSync(dest);
-    fs.unlinkSync(ab_file_generated);
+    //fs.rmdirSync(dest);
+    //fs.unlinkSync(ab_file_generated);
     server.close();
 }

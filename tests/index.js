@@ -6,12 +6,10 @@ const errors_integration_suite = require('./suites/error.integrator.test');
 const integration_suite = require('./suites/integration.test');
 const integration_big_file_suite = require('./suites/integration.bigfile.test');
 const integration_custom_suite = require('./suites/integration.test.custom.dest');
-const detector_suite = require('./suites/detector.test');
 const timeout_suite = require('./suites/timeout.test');
 
 const Helper = require('./lib/helper');
 const CryptoBusBoy = require('../src');
-const Detector = require('../src/lib/fileTypeDetector');
 const DetectorTimeOut = require('../src/lib/detector-timeout');
 
 let bigSize;
@@ -56,8 +54,6 @@ describe('Test Integration Error',
     errors_integration_suite.bind(this));
 describe('Test Integration Custom options',
     integration_custom_suite.bind(this));
-describe('Test FileType Detector Stream',
-    detector_suite.bind(this, Detector));
 describe('Test timeout Detector Stream',
     timeout_suite.bind(this, DetectorTimeOut));
 

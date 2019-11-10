@@ -1,5 +1,4 @@
 const fs = require('fs');
-const Detector = require('../fileTypeDetector');
 const DetectorTimeout = require('../detector-timeout');
 const FileExtensions = require('../file-extensions');
 const {Base64Decode} = require('base64-stream');
@@ -30,6 +29,8 @@ module.exports = class BusBoss {
         this.detectorTimeout = new DetectorTimeout(opt);
         this.cipher = cipher;
         this.busboy_finished = false;
+
+        this['reactor'] = Symbol('reactor');
         //debug('BUS-FILE CLASS' , this)
     }
 
@@ -119,10 +120,11 @@ module.exports = class BusBoss {
      */
     start(req, busBoy, folder) {
         return new Promise((resolve, reject) => {
-
             debug_bus('Start Busboy Core');
             debug_bus('Folder', folder);
+
             this.detectorTimeout.detect_timeout(this._detector_timeout(reject));
+
             /* busboy events **/
             busBoy
                 .on('field', this._field_cb())
@@ -163,7 +165,7 @@ module.exports = class BusBoss {
         return async (fieldname, file, filename, encoding, mimetype) => {
             debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
-            let cipher, detector;
+            let cipher, file_type;
             /* on file new busFile **/
             const bfile = new File(
                 fieldname,
@@ -176,11 +178,18 @@ module.exports = class BusBoss {
                 this.detector_mode
             );
 
+           /* if (this.detector_mode){
+                this['reactor'] = await fileType.stream(bfile.file);
+            } else {
+                this['reactor'] = bfile.file;
+            }*/
+
             this.filesToDisk.push(bfile.fullPath());
 
             /* fs writeableStream events **/
             bfile.writeable
                 .once('finish', () => {
+                    this.response.files.push(bfile.toJson());
                     process.nextTick(() => {
                         bfile.remListeners();
                         if (this.busboy_finished) {
@@ -192,27 +201,23 @@ module.exports = class BusBoss {
             /* cipher file ? **/
             if (this.crypto_mode) cipher = await this._getCipher();
 
+
             /* busboy file events **/
             bfile.file
                 .once('limit', this._file_limit(bfile, resolve))
                 .once('error', this._file_err(bfile, reject))
-                .once('end', this._file_end(bfile));
+                //.once('end', this._file_end(bfile));
 
             /* pipe **/
             if (this.detector_mode && this.crypto_mode) {
                 debug_mode('DETECTION MODE && CRYPTO MODE');
 
                 const fileTypeStream = await fileType.stream(bfile.file);
+
                 if (!this._allowedExtensions(fileTypeStream)) {
-                    bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
-                    debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
-                    bfile.file.resume();
-                    fileTypeStream.destroy();
-                    this.response.files.push(bfile.toJson())
-                    debug_mime(`WEEEEEEEEEEEEE ${this.busboy_finished}`);
-                   // BusBoss._deleteFailed(bfile.fullPath());
-                    //if (this.busboy_finished)
-                        return this._return(resolve);
+                    return this
+                        .typeNotAllowed(bfile, fileTypeStream)
+                        ._return(resolve);
                 } else {
                     if (encoding === 'base64')
                         fileTypeStream
@@ -247,24 +252,19 @@ module.exports = class BusBoss {
                 const fileTypeStream = await fileType.stream(bfile.file);
 
                 if (!this._allowedExtensions(fileTypeStream)) {
-                    bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
-                    debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
-                    bfile.file.resume();
-                    fileTypeStream.destroy()
-                    this.response.files.push(bfile.toJson())
-                    debug_mime(`WEEEEEEEEEEEEE ${this.busboy_finished}`);
-                    //BusBoss._deleteFailed(bfile.fullPath());
-                    //if (this.busboy_finished)
-                        return this._return(resolve);
-                } else {
-                    if (encoding === 'base64')
-                        fileTypeStream
-                            .pipe(new Base64Decode())
-                            .pipe(bfile.writeable);
-                    else
-                        fileTypeStream
-                            .pipe(bfile.writeable);
-                }
+                        return this
+                            .typeNotAllowed(bfile, fileTypeStream)
+                            ._return(resolve);
+                    } else {
+                        if (encoding === 'base64')
+                            fileTypeStream
+                                .pipe(new Base64Decode())
+                                .pipe(bfile.writeable);
+                        else
+                            fileTypeStream.pipe(bfile.writeable);
+                    }
+
+
             } else if (!this.detector_mode && !this.crypto_mode) {
                 debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
 
@@ -278,18 +278,14 @@ module.exports = class BusBoss {
         }
     }
 
-    detector(bfile){
-        return fileType.stream(bfile.file);
-    }
-
-    /**
-     * Get new Detector
-     *
-     * @return {FileTypeDetector|*}
-     * @private
-     */
-    _getDetector() {
-        return new Detector;
+    typeNotAllowed(bfile, fileTypeStream){
+        bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
+        debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
+        bfile.file.resume();
+        fileTypeStream.destroy();
+        this.response.files.push(bfile.toJson());
+        BusBoss._deleteFailed(bfile.fullPath());
+        return this;
     }
 
     /**
@@ -327,27 +323,6 @@ module.exports = class BusBoss {
         }
     };
 
-    /**
-     * detector type event callback
-     *
-     * @param bfile
-     * @param resolve
-     * @return {Function}
-     * @private
-     */
-    mime_detector(bfile, resolve) {
-        return (type) => {
-            bfile.finished_detector = true;
-            if (!type || !this._allowedExtensions(type.ext)) {
-                bfile.error = `EXTENSION NOT ALLOWED ${bfile.ext}`;
-                debug_mime(`ERROR MUST BE INCLUDED: EXTENSION NOT ALLOWED ${bfile.ext}`);
-                bfile.file.resume();
-                BusBoss._deleteFailed(bfile.fullPath());
-                if (this.busboy_finished)
-                    return this._return(resolve);
-            }
-        }
-    };
 
     /**
      * busFile.file finish event callback
@@ -390,6 +365,7 @@ module.exports = class BusBoss {
      * @param fileTypeStream
      */
     _allowedExtensions(fileTypeStream) {
+        debug_mime(fileTypeStream.fileType);
         if(!fileTypeStream)
             return false;
         if(!fileTypeStream.fileType)

@@ -1,6 +1,6 @@
 {
   "name": "crypto-busboy",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "busboy upload with encryption option",
   "main": "src/index.js",
   "scripts": {
@@ -44,8 +44,7 @@
     "nodegit": "^0.26.2",
     "prettysize": "^2.0.0",
     "request": "^2.88.0",
-    "superagent": "^5.1.0",
-    "unzipper": "^0.10.5"
+    "superagent": "^5.1.0"
   },
   "homepage": "https://github.com/adsegura/crypto-busboy/blob/master/README.md",
   "repository": {
