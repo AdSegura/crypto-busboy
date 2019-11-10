@@ -140,13 +140,14 @@ module.exports = function suite(mode) {
     describe('test upload limit file types', () => {
         let fileUploaded1, fileUploaded1_real_name;
 
-        it(`Should Upload 2 files, f3.jpeg allowed, docsZip mot allowed mode [${mode}]`, async () => {
+        it(`Should Upload 2 files, f3.jpeg allowed, docsZip not allowed mode [${mode}]`, async () => {
             const agent = Helper.factoryAgent(upload_options);
             const res = await agent
                 .post(Helper.urls().upload)
                 .attach('my photo 3', Helper.files().f3)
                 .attach('my.docx', Helper.files().f2docxZip);
 
+            console.log(res.text);
             res.should.have.status(429);
             res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f3'));
             res.body.files[0].should.have.property('error').eql(null);
