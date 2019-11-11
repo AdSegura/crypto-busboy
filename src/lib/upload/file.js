@@ -23,7 +23,6 @@ module.exports = class File {
         this.finished_detector =  !this.detector_mode;
         this.writeable =  Helper.is_writeStream(this.folder) ?
                 this.folder.createWriteStream(this.fullName()) : fs.createWriteStream(this.fullPath());
-        //debug('FILE CLASS' , this)
     }
 
     /**
