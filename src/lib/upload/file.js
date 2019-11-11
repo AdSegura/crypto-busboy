@@ -8,6 +8,7 @@ module.exports = class File {
 
     constructor(fieldname, file, filename, encoding, mimetype, folder, crypto_mode, detector_mode){
         this.file = file;
+        this.size = 0;
         this.filename = filename;
         this.fieldname = fieldname;
         this.folder = folder;
@@ -45,7 +46,8 @@ module.exports = class File {
             fullPath: this.fullPath(),
             error: this.error,
             finished: this.finished,
-            failed: this.failed
+            failed: this.failed,
+            size: this.size
         }
     }
 

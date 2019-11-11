@@ -1,7 +1,7 @@
 {
   "name": "crypto-busboy",
-  "version": "1.0.4",
-  "description": "busboy upload with encryption option",
+  "version": "1.0.5",
+  "description": "busboy upload with encryption option and type file detector",
   "main": "src/index.js",
   "scripts": {
     "test": "NODE_ENV=test node_modules/.bin/_mocha --exit --big_file_size '50mb' tests/"
@@ -14,7 +14,9 @@
     "busboy",
     "crypto",
     "upload",
-    "streams"
+    "streams",
+    "detector",
+    "mime-detector"
   ],
   "author": "Adolfo Segura Hall",
   "license": "MIT",

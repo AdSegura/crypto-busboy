@@ -1,5 +1,4 @@
 const Busboy = require('busboy');
-const DetectorTimeout = require('../detector-timeout');
 const BusBoss = require('./busBoss');
 const debug = require('debug')('cryptoBus:upload');
 
@@ -10,13 +9,10 @@ module.exports = class Upload {
         this.errors = [];
         this.warnings = [];
         this.fields = [];
-        this.detectorTimeout = new DetectorTimeout(opt);
         this.busBoy = null;
-
         this._crypto_mode = crypto_mode;
         this._detection_mode = detection_mode;
         this.cipher = cipher;
-        debug('new Upload instance created')
     }
 
     /**
@@ -24,21 +20,24 @@ module.exports = class Upload {
      *
      * @param req
      * @param opt
-     * @return {Promise<unknown>}
+     * @return {Promise<array>}
      */
      start(req, opt) {
         return new Promise((resolve, reject) => {
-            this.busBoy = this._getBusBoy(req, opt);
-            const busBoss = new BusBoss(this.opt, this._crypto_mode, this._detection_mode, this.cipher);
 
-            busBoss.start(req, this.busBoy, this.opt.dest)
-                .then(res => {
-                //console.log('response', res);
-                resolve(this._closeReq(res));
-            }).catch(e => {
-                debug('start error', e);
-                reject(e)
-            })
+            this.busBoy = this._getBusBoy(req, opt);
+
+            const busBoss = new BusBoss(
+                this.opt,
+                this._crypto_mode,
+                this._detection_mode,
+                this.cipher
+            );
+
+            busBoss
+                .start(req, this.busBoy, this.opt.dest)
+                .then(res => resolve(this._closeReq(res)))
+                .catch(e => reject(e))
         })
     }
 
@@ -85,8 +84,6 @@ module.exports = class Upload {
 
         const uploads = response.files.filter(f => f.error === null);
         const wrong = response.files.filter(f => f.error !== null);
-
-        debug('WRONG', [...response.errors, ...wrong]);
 
         return {
             warnings: response.warnings,

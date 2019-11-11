@@ -7,7 +7,14 @@ Upload and download files from nodejs using streams.
 
 Optional you can cipher all incoming files, and decipher for download, without storing any clear version of the files.
 
-All data manipulation is done using streams.  
+All data manipulation is done using streams.
+
+This module can limit upload on:
+* file size (busBoy)
+* files count (busBoy)
+* file extension (sniffing file header not assuming mime headers that can be faked)  
+
+File extension detection only works with this extensions [`file-type module` extensions support](https://github.com/sindresorhus/file-type#supported-file-types)
 
 This module is based on [busboy upload module](https://github.com/mscdex/busboy) 
 
@@ -15,6 +22,7 @@ This module is based on [busboy upload module](https://github.com/mscdex/busboy)
 ```sh
 > npm i crypto-busboy
 ```
+
 # Features
 * upload files with busboy size limits and file count limit, (basic BusBoy usage)
 * upload only files with allowed extension [`file-type module` extensions support](https://github.com/sindresorhus/file-type#supported-file-types).
@@ -113,9 +121,12 @@ function uploadFilesCustomOpt(req, res, next){
             "ext":"jpeg",
             "folder":"/crypto-upload/tests/files",
             "fullPath":"/crypto-upload/tests/files/4541a890-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
-            "error":null
+            "error":null,
+            "finished": true,
+            "failed": false,
+            "size": 32606
         }
-        ],
+    ],
    "fields":[{"avatar":"true"}]}
 ```
 **Upload two files, not allowed extensions `xsl, mdb`**
@@ -150,31 +161,46 @@ function uploadFilesCustomOpt(req, res, next){
 ```
 **Upload 5 files limit is 2, Ok two files and get warning = `MAX FILES REACHED`**
 ```json
-
 {
-    "warnings":["MAX FILES REACHED, LIMIT IS 2 FILES"],
-    "errors":[],
-    "files":
-        [{
-            "filename":"f2.jpeg",
-            "fullname":"4559eb80-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
-            "newname":"4559eb80-f451-11e9-afca-ef6fa948a376-ciphered",
-            "fieldname":"my photo 2",
-            "ext":"jpeg",
-            "folder":"/crypto-upload/tests/files",
-            "fullPath":"/crypto-upload/tests/files/4559eb80-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
-            "error":null
-            },{
-                "filename":"f3.jpeg",
-                "fullname":"455a60b0-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
-                "newname":"455a60b0-f451-11e9-afca-ef6fa948a376-ciphered",
-                "fieldname":"my photo 3",
-                "ext":"jpeg",
-                "folder":"/crypto-upload/tests/files",
-                "fullPath":"/crypto-upload/tests/files/455a60b0-f451-11e9-afca-ef6fa948a376-ciphered.jpeg",
-                "error":null
-       }],
-    "fields":[]
+"warnings": [ "MAX FILES REACHED, LIMIT IS 2 FILES" ],
+"files": [
+    {
+      "filename": "f2.jpeg",
+      "fullname": "bd87cd00-04ca-11ea-a94b-e3abd7553c43-ciphered.jpeg",
+      "newname": "bd87cd00-04ca-11ea-a94b-e3abd7553c43-ciphered",
+      "fieldname": "my photo 2",
+      "encoding": "7bit",
+      "mimetype": "image/jpeg",
+      "crypto_mode": true,
+      "detector_mode": true,
+      "ext": "jpeg",
+      "folder": "/crypto-busboy/tests/files",
+      "fullPath": "/crypto-busboy/tests/files/bd87cd00-04ca-11ea-a94b-e3abd7553c43-ciphered.jpeg",
+      "error": null,
+      "finished": true,
+      "failed": false,
+      "size": 32606
+    },
+    {
+      "filename": "f3.jpeg",
+      "fullname": "bd89efe0-04ca-11ea-a94b-e3abd7553c43-ciphered.jpeg",
+      "newname": "bd89efe0-04ca-11ea-a94b-e3abd7553c43-ciphered",
+      "fieldname": "my photo 3",
+      "encoding": "7bit",
+      "mimetype": "image/jpeg",
+      "crypto_mode": true,
+      "detector_mode": true,
+      "ext": "jpeg",
+      "folder": "/crypto-busboy/tests/files",
+      "fullPath": "/crypto-busboy/tests/files/bd89efe0-04ca-11ea-a94b-e3abd7553c43-ciphered.jpeg",
+      "error": null,
+      "finished": true,
+      "failed": false,
+      "size": 66860
+    }
+  ],
+  "fields": [],
+  "errors": []
 }
 ```
 
