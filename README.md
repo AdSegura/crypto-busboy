@@ -49,8 +49,8 @@ const options = {
 ```
 
 #### options.dest
-`dest:` can be a local path `/foo/bar`
-`dest:` can be an object with `createWriteStream` method exposing your custom writeable stream
+* `dest:` can be a local path `/foo/bar`
+* `dest:` can be an object with `createWriteStream` method exposing your custom writeable stream
 
 ```js
  const dest =  {
