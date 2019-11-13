@@ -48,6 +48,37 @@ const options = {
 }
 ```
 
+#### options.dest
+`dest:` can be a local path `/foo/bar`
+`dest:` can be an object with `createWriteStream` method exposing your custom writeable stream
+
+```js
+ const dest =  {
+                createWriteStream: (filename) => {
+                    const dir = '/tmp/uptest';
+                    return fs.createWriteStream(dir + '/' + filename)
+                }
+            };
+```
+
+#### options.key
+Optional param, if you want to cipher uploads you must provide a password.
+#### options.alg
+Optional param, default alg `aes-256-cbc`.
+#### options.timeOut
+By default if a client start to upload a file and there is no incoming data in 5 seconds,
+cryptoBusBoy will assume the upload is broken and will tag the upload session as failed 
+releasing all resources.
+
+If you are dealing with very unstable clients You can increase timeOut value as you wish.
+#### options.limits
+Optional param.
+
+Limits 
+* fileSize limit in bytes.
+* files limit, number of files allowed to Upload
+* file-type limit will limit files by mime type.
+
 ### express example
 ```js
 const cryptoBusBoy = new CryptoBusBoy(options);
@@ -129,7 +160,7 @@ function uploadFilesCustomOpt(req, res, next){
     ],
    "fields":[{"avatar":"true"}]}
 ```
-**Upload two files, not allowed extensions `xsl, mdb`**
+**Upload not allowed extension file `xsl`**
 
 ```json
 {
@@ -144,17 +175,7 @@ function uploadFilesCustomOpt(req, res, next){
         "folder":"/crypto-upload/tests/files",
         "fullPath":"/crypto-upload/tests/files/45463c70-f451-11e9-afca-ef6fa948a376-ciphered.xlsx",
         "error":"EXTENSION NOT ALLOWED xlsx"
-    },
-    {
-        "filename":"f1.mdb",
-        "fullname":"4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered.mdb",
-        "newname":"4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered",
-        "fieldname":"my access",
-        "ext":"mdb",
-        "folder":"/crypto-upload/tests/files",
-        "fullPath":"/crypto-upload/tests/files/4546d8b0-f451-11e9-afca-ef6fa948a376-ciphered.mdb",
-        "error":"EXTENSION NOT ALLOWED mdb"
-     }],
+    }],
   "files":[],
   "fields":[]
 }
