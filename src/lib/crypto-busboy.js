@@ -91,7 +91,7 @@ module.exports = class CryptoBusBoy {
      * @param next
      * @param file
      */
-    download(req, res, next, file) {
+    download(req, res, next, file) { // TODO check if if we are NOT on write stream mode && check if file exist
         file = file || req.params.file;
 
         if (file.includes('-ciphered'))

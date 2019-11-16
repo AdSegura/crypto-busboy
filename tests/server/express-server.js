@@ -115,7 +115,7 @@ if (is_script) {
                 conf.dest = {
                     createWriteStream: (filename) => {
                         //return stream to localhost:3000/busboy
-                        return http.request({port: 4000, path: '/upload_pipe', method:'post'});
+                        return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'post'});
                     }
 
                 };
