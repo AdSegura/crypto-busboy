@@ -3,7 +3,7 @@ const uuid = require('uuid/v1');
 const path = require('path');
 const fs = require('fs');
 const debug = require('debug')('cryptoBus:file');
-
+const pathOrName = Symbol('pathOrName');
 module.exports = class File {
 
     constructor(fieldname, file, filename, encoding, mimetype, folder, crypto_mode, detector_mode){
@@ -22,8 +22,17 @@ module.exports = class File {
         this.crypto_mode = crypto_mode;
         this.detector_mode = detector_mode;
         this.finished_detector =  !this.detector_mode;
-        this.writeable =  Helper.is_writeStream(this.folder) ?
-                this.folder.createWriteStream(this.fullName()) : fs.createWriteStream(this.fullPath());
+        this[pathOrName] = null;
+        this.writeable = null;
+
+        if(Helper.is_writeStream(this.folder)){
+            this[pathOrName] = this.fullName();
+            this.writeable =  () => { return this.folder.createWriteStream(this[pathOrName]) };
+        }else {
+            this[pathOrName] = this.fullPath();
+            this.writeable = () => { return fs.createWriteStream(this[pathOrName]) };
+        }
+
     }
 
     /**
@@ -113,7 +122,7 @@ module.exports = class File {
      * Remove listeners
      */
     remListeners(){
-        Helper.remlisteners(this.writeable);
+        //Helper.remlisteners(this.writeable);
         Helper.remlisteners(this.file);
     }
 }

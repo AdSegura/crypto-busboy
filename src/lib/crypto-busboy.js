@@ -9,21 +9,23 @@ const Upload = require('./upload');
 const Cryptonite = require('../crypto/cryptonite');
 const os = require('os');
 const Helper = require('./lib/helper');
+const cloneDeep = require('lodash/cloneDeep');
 
 module.exports = class CryptoBusBoy {
 
     constructor(opt, upload) {
-        this.options = opt || {};
+        this.options = cloneDeep(opt) || {};
         this._crypto_mode = false;
         this._detection_mode = false;
         this.cipher = null;
         this.options.dest = this.options.dest || os.tmpdir();
 
-        this.checkDestinationFolder();
+        this._checkDestinationFolder();
         this.options.limits = this.options.limits || {};
 
         if (this.options.limits && this.options.limits.hasOwnProperty('allowed')){
-            this.options.limits.allowed = FileExtensions.normalizeExtensions(opt.limits.allowed);
+            this.options.limits.allowed = FileExtensions
+                .normalizeExtensions(this.options.limits.allowed);
             this._detection_mode = true;
         }
 
@@ -41,7 +43,7 @@ module.exports = class CryptoBusBoy {
     /**
      * Check if Dir is writable.
      */
-    checkDestinationFolder(folder) {
+    _checkDestinationFolder(folder) {
         folder = folder || this.options.dest;
 
         if(Helper.is_writeStream(folder)) return;
@@ -60,16 +62,22 @@ module.exports = class CryptoBusBoy {
      */
     async upload(req, opt) {
         debug('upload start');
+        let options;
+
         if (opt) {
             if (typeof opt != 'object')
                 throw new CryptoBusError('upload options must be object');
             if (!opt.dest)
-                throw new Error('upload options must have dest option');
+                throw new CryptoBusError('upload options must have dest option');
+
+            options = cloneDeep(opt)
         }
 
         try {
-            if (opt) await makeFolder(opt.dest);
-            return await this.processRequestFiles(req, opt);
+            if (options && !Helper.is_writeStream(options.dest))
+                await makeFolder(options.dest);
+
+            return await this._processRequestFiles(req, options);
         } catch (e) {
             return await Promise.reject(new CryptoBusError(e));
         }
@@ -106,17 +114,24 @@ module.exports = class CryptoBusBoy {
      * @param {*} req
      * @param opt [optional] {dest}
      */
-    processRequestFiles(req, opt) {
+    _processRequestFiles(req, opt) {
         // One important caveat is that if the Readable stream emits an error during processing,
         // the Writable destination is not closed automatically.
         // If an error occurs, it will be necessary to manually close each stream in order to prevent memory leaks.
         debug('Start processing Request Files');
 
-        const errors = CryptoBusBoy.checkHeaders(req);
+        const errors = CryptoBusBoy._checkHeaders(req);
+
         if(errors !== true)
             return Promise.resolve({errors, warnings: [], files: []});
 
-        const up = new this.Upload(this.options, this._crypto_mode, this._detection_mode, this.cipher);
+        const up = new this.Upload(
+            this.options,
+            this._crypto_mode,
+            this._detection_mode,
+            this.cipher
+        );
+
         return up.start(req, opt);
     }
 
@@ -126,7 +141,7 @@ module.exports = class CryptoBusBoy {
      * @param req
      * @return {Array|boolean}
      */
-    static checkHeaders(req) {
+    static _checkHeaders(req) {
         if (!req.headers) return ['no headers found in request'];
 
         if (!req.headers['content-type']) return ['Missing Content-Type'];

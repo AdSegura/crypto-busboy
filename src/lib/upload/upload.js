@@ -1,10 +1,11 @@
 const Busboy = require('busboy');
 const BusBoss = require('./busBoss');
+const cloneDeep = require('lodash/cloneDeep');
 const debug = require('debug')('cryptoBus:upload');
 
 module.exports = class Upload {
     constructor(opt, crypto_mode, detection_mode, cipher) {
-        this.opt = Object.assign({}, opt);
+        this.opt = cloneDeep(opt);
         this.files = [];
         this.errors = [];
         this.warnings = [];

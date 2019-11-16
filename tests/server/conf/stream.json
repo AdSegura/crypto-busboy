@@ -1,0 +1,11 @@
+{
+  "key": "super-password",
+  "dest": "",
+  "limits": {
+    "fileSize": 1048576,
+    "files": 2,
+    "allowed": [
+      "jpg", "png"
+    ]
+  }
+}

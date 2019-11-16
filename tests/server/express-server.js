@@ -7,6 +7,7 @@ const uuid = require('uuid/v1');
 const Router = require('./router');
 const Helper = require('../lib/helper');
 const debug = require('debug')('cryptoBus:express');
+const mkdirp = require('mkdirp');
 
 const CryptoBusBoy = require('../../src/');
 
@@ -110,6 +111,15 @@ if (is_script) {
             const confile = process.argv[process.argv.indexOf('--conf') + 1];
             console.log(require('./conf/' + confile + '.json'));
             conf = Object.assign({}, conf, require('./conf/' + confile + '.json'));
+            if(confile === 'stream') {
+                conf.dest = {
+                    createWriteStream: (filename) => {
+                        //return stream to localhost:3000/busboy
+                        return http.request({port: 4000, path: '/upload_pipe', method:'post'});
+                    }
+
+                };
+            }
         }
 
         const server = new ExpressServer(null, conf);

@@ -1,4 +1,5 @@
 const debug = require('debug')('cryptoBus:express');
+const fs = require('fs');
 
 module.exports = class Router {
     constructor(instance){
@@ -12,6 +13,7 @@ module.exports = class Router {
         this.app.get('/file/:file', (req, res, next) => this.downloadFile(req, res, next));
         this.app.post('/busboy', (req, res, next) => this.uploadFiles(req, res, next));
         this.app.post('/busboy_opt', (req, res, next) => this.uploadFilesCustomOpt(req, res, next));
+        this.app.post('/upload_pipe', (req, res, next) => this.uploadPipe(req, res, next));
     }
 
     root(req, res, next){
@@ -21,6 +23,15 @@ module.exports = class Router {
     form(req, res, next) {
         res.send('<html><head><body><form enctype="multipart/form-data" method="POST" action="/busboy"><input class="upp" type="file" id="upload" name="file"><input id="btn" type="submit" value="Submit"></form></body></head></html>');
     }
+
+    uploadPipe(req, res, next) {
+        console.log('TOUCHED!!!!!!!!!!!!!!!');
+        const dest = fs.createWriteStream('/tmp/kk.kk');
+        req.on('data', data => console.log(data));
+        req.on('end', next);
+        req.pipe(dest);
+    }
+
 
     uploadFiles(req, res, next){
         debug(this.instance.busOpt);
