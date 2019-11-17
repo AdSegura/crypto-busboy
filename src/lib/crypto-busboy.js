@@ -19,6 +19,7 @@ module.exports = class CryptoBusBoy {
         this._detection_mode = false;
         this.cipher = null;
         this.options.dest = this.options.dest || os.tmpdir();
+        this.remote_dest_mode = Helper.is_writeStream(this.options.dest);
 
         this._checkDestinationFolder();
         this.options.limits = this.options.limits || {};
@@ -91,13 +92,16 @@ module.exports = class CryptoBusBoy {
      * @param next
      * @param file
      */
-    download(req, res, next, file) { // TODO check if if we are NOT on write stream mode && check if file exist
+    download(req, res, next, file) { // TODO  check if file exist
+        if(this.remote_dest_mode)
+            return next(new CryptoBusError('CryptoBusBoy is on remote write stream mode, cannot get file.'));
+
         file = file || req.params.file;
 
-        if (file.includes('-ciphered'))
+        if (file.includes('-ciphered') && this._crypto_mode)
             return this.getCipherFile(file, res, next);
 
-        return this.getUnCipherFile(file, res, next);
+        return this.getFile(file, res, next);
     }
 
     /**
@@ -186,7 +190,7 @@ module.exports = class CryptoBusBoy {
      * @param res
      * @param next
      */
-    getUnCipherFile(file, res, next) {
+    getFile(file, res, next) {
         const toMimeStream = new MimeStream();
         const file_path = path.join(this.options.dest, file);
 
