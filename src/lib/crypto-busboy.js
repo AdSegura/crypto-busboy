@@ -92,16 +92,53 @@ module.exports = class CryptoBusBoy {
      * @param next
      * @param file
      */
-    download(req, res, next, file) { // TODO  check if file exist
+   async download(req, res, next, file) {
         if(this.remote_dest_mode)
             return next(new CryptoBusError('CryptoBusBoy is on remote write stream mode, cannot get file.'));
 
         file = file || req.params.file;
 
+        if(!this._checkFilename(file))
+            return next(new CryptoBusError('filename unknown format'));
+
+        if(! await this._fileExists(file))
+            return next(new CryptoBusError('file not found'));
+
         if (file.includes('-ciphered') && this._crypto_mode)
             return this.getCipherFile(file, res, next);
 
         return this.getFile(file, res, next);
+    }
+
+    /**
+     * validate filename
+     * filename must match: uuidv1(-ciphered)?.ext
+     *
+     * @param filename
+     * @return {boolean}
+     * @private
+     */
+    _checkFilename(filename){
+       const exp =
+           /[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}(\-ciphered)?\.[a-zA-z0-9]/;
+
+       return exp.test(filename)
+    }
+
+    /**
+     * check if file exists in ths.options.dest
+     *
+     * @param file
+     * @return {Promise<boolean>}
+     * @private
+     */
+    _fileExists(file){
+        return new Promise((resolve, reject) => {
+            fs.access(path.join(this.options.dest, file), fs.constants.R_OK, (err) => {
+                if(err) return resolve(false);
+                resolve(true);
+            });
+        })
     }
 
     /**
