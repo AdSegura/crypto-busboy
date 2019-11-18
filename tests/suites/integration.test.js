@@ -8,7 +8,7 @@ const md5 = require("md5");
 const {binaryParser} = require('../lib/binaryParser');
 const Helper = require('../lib/helper');
 const path = require('path');
-const mkdirp = require('mkdirp');
+const cloneDeep = require('lodash/cloneDeep');
 
 module.exports = function suite(mode) {
 
@@ -185,31 +185,6 @@ module.exports = function suite(mode) {
         res.body.fields[0].should.have.property('avatar').eql("true");
     });
 
-    it(`Should Upload file with writeStream destination as option [${mode}]`, async () => {
-        const dest =  {
-            createWriteStream: (filename) => {
-                return fs.createWriteStream(path.join(Helper.getUploadServerFolder(), filename))
-            }
-        };
-
-        const upload_options = {dest};
-
-        if (mode === 'crypto')
-            upload_options.key = 'super-password';
-
-        const agent = Helper.factoryAgent(upload_options);
-
-        const res = await agent
-            .post(Helper.urls().upload)
-            .attach('my photo 4', Helper.files().f4)
-            .field("avatar", "true");
-
-        res.should.have.status(200);
-        res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f4'));
-        res.body.files[0].should.have.property('error').eql(null);
-        res.body.fields[0].should.have.property('avatar').eql("true");
-    });
-
     it('Should FAIL upload Xsl/Access files', async () => {
         const agent = Helper.factoryAgent(upload_options);
         const res = await agent
@@ -250,48 +225,5 @@ module.exports = function suite(mode) {
         res.body.errors[0].should.have.property('error').eql('EXTENSION NOT ALLOWED zip');
     });
 
-
-    describe('test upload destination is a writeStream', () => {
-        let fileUploaded1, fileUploaded1_real_name;
-        const dir = '/tmp/uptest/' + (new Date).getMilliseconds();
-
-        it(`Should Upload 1 file to custom writeStream, mode [${mode}]`, async () => {
-            const dest =  {
-                createWriteStream: (filename) => {
-                    mkdirp.sync(dir);
-                    return fs.createWriteStream(dir + '/' + filename)
-                }
-            };
-
-            const opt = Object.assign({}, upload_options, {dest});
-
-            const agent = Helper.factoryAgent(opt);
-            const res = await agent
-                .post(Helper.urls().upload)
-                .attach('my photo 2', Helper.files().f2);
-
-            res.should.have.status(200);
-            res.body.files[0].should.have.property('filename').eql(Helper.getFileName('f2'));
-            res.body.files[0].should.have.property('error').eql(null);
-
-            fileUploaded1 = res.body.files[0].fullname;
-            fileUploaded1_real_name = res.body.files[0].filename.split('.')[0];
-        });
-
-
-        it(`Should Download previously upload file mode [${mode}] and MD5 check`, async () => {
-            const opt = Object.assign({}, upload_options, {dest: dir});
-
-            const agent = Helper.factoryAgent(opt);
-
-            const res = await agent
-                .get(`${Helper.urls().getFile}/${fileUploaded1}`)
-                .buffer()
-                .parse(binaryParser);
-
-            expect(res).to.have.status(200);
-            expect(md5(res.body)).to.equal(Helper.md5File(Helper.files()[fileUploaded1_real_name]));
-        });
-    });
 };
 
