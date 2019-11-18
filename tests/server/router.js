@@ -1,6 +1,7 @@
 const debug = require('debug')('cryptoBus:express');
 const fs = require('fs');
 const Helper = require('../lib/helper');
+const path = require('path');
 
 module.exports = class Router {
     constructor(instance){
@@ -15,6 +16,7 @@ module.exports = class Router {
         this.app.post('/busboy', (req, res, next) => this.uploadFiles(req, res, next));
         this.app.post('/busboy_opt', (req, res, next) => this.uploadFilesCustomOpt(req, res, next));
         this.app.post('/upload_pipe/:file', (req, res, next) => this.uploadPipe(req, res, next));
+        this.app.delete('/delete/:file', (req, res, next) => this.deleteFile(req, res, next));
     }
 
     root(req, res, next){
@@ -25,9 +27,18 @@ module.exports = class Router {
         res.send('<html><head><body><form enctype="multipart/form-data" method="POST" action="/busboy"><input class="upp" type="file" id="upload" name="file"><input id="btn" type="submit" value="Submit"></form></body></head></html>');
     }
 
+    deleteFile(req, res, next){
+        const fileName = req.params.file;
+        const full_path = path.join(Helper.getUploadServerFolder(), fileName);
+        fs.unlink(full_path, e => {
+            if(e) return next(e);
+            return res.json({deleted: true});
+        })
+    }
+
     uploadPipe(req, res, next) {
         const fileName = req.params.file;
-        const dest = fs.createWriteStream(Helper.getUploadServerFolder() + '/' + fileName);
+        const dest = fs.createWriteStream(path.join(Helper.getUploadServerFolder(), fileName));
         req.on('end', next);
         req.pipe(dest);
     }

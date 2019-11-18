@@ -114,7 +114,11 @@ if (is_script) {
                 conf.dest = {
                     createWriteStream: (filename) => {
                         return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'get'});
-                    }
+                    },
+                    deleteFailedStream: (filename) => {
+                        return http.request({port: 4000, path: `/delete/${filename}`, method:'delete'});
+                    },
+                    path: 'http://localhost:4000/file/'
                 };
             }
         }
