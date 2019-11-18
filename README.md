@@ -54,11 +54,27 @@ const options = {
 
 ```js
  const dest =  {
-                createWriteStream: (filename) => {
-                    const dir = '/tmp/uptest';
-                    return fs.createWriteStream(dir + '/' + filename)
-                }
-            };
+    createWriteStream: (filename) => {
+        const dir = '/tmp/uptest';
+        return fs.createWriteStream(dir + '/' + filename)
+    }
+};
+```
+
+**File destination is a writeStream to a remote server**
+```js
+const http = require('http');
+
+const dest = {
+    createWriteStream: (filename) => {
+        return http
+                  .request({
+                       port: 4000, 
+                       path: `/upload_pipe/${filename}`,
+                       method:'post'
+                  });
+    }
+};
 ```
 
 #### options.key
@@ -101,14 +117,16 @@ function uploadFiles(req, res, next){
                     res.json(r);
             })
             .catch(e => next(e))
-    }
+}
 
 function downloadFile(req, res, next){
         const file = req.params.file;
-        cryptoBusBoy.download(req, res, next, file);
+        cryptoBusBoy
+                    .download(req, res, next, file)
+                    .catch(e => next(e))
         //or if you are using req.params.file you can directly use
         // cryptoBusBoy.download(req, res, next);
-    }
+}
 
 function uploadFilesCustomOpt(req, res, next){
         const force_path = busOpt.dest + '/foo/';

@@ -105,7 +105,7 @@ module.exports = class CryptoBusBoy {
             return next(new CryptoBusError('file not found'));
 
         if (file.includes('-ciphered') && this._crypto_mode)
-            return this.getCipherFile(file, res, next);
+            return this._getCipherFile(file, res, next);
 
         return this.getFile(file, res, next);
     }
@@ -200,7 +200,7 @@ module.exports = class CryptoBusBoy {
      * @param res
      * @param next
      */
-    getCipherFile(file, res, next) {
+    _getCipherFile(file, res, next) {
         const destination = path.join(this.options.dest, file);
         const toMimeStream = new MimeStream();
         this.cipher.decryptFileStream(destination)
@@ -211,13 +211,28 @@ module.exports = class CryptoBusBoy {
                     });
                 });
 
-                decrypted.on('error', (e) => {
-                    return next(e)
-                }).pipe(toMimeStream).pipe(res);
+                decrypted
+                    .on('error', e => next(e))
+                    .pipe(toMimeStream)
+                    .pipe(res);
 
-            }).catch((e) => {
-                next(e);
-        });
+            })
+            .catch(e => next(e));
+    }
+
+    /**
+     * Download cipher file
+     *
+     * @param file
+     * @param res
+     * @param next
+     */
+    async getCipherFile(file, res, next) {
+
+        if(! await this._fileExists(file))
+            return next(new CryptoBusError('file not found'));
+
+       return this._getCipherFile(file, res, next);
     }
 
     /**

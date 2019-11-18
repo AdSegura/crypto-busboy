@@ -53,7 +53,8 @@ module.exports = class Router {
     downloadFile(req, res, next) {
         debug(this.instance.busOpt);
         const file = req.params.file;
-        this.instance.cryptoBusBoy.download(req, res, next, file);
+        this.instance.cryptoBusBoy.download(req, res, next, file)
+            .catch(() => console.error('Download error'));
     }
 
     uploadFilesCustomOpt(req, res, next){
