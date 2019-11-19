@@ -1,6 +1,5 @@
 const debug = require('debug')('cryptoBus:express');
 const fs = require('fs');
-const Helper = require('../lib/helper');
 const path = require('path');
 
 module.exports = class Router {
@@ -38,8 +37,13 @@ module.exports = class Router {
 
     uploadPipe(req, res, next) {
         const fileName = req.params.file;
-        const dest = fs.createWriteStream(path.join(Helper.getUploadServerFolder(), fileName));
-        req.on('end', next);
+        const fdest = path.resolve(__dirname, '../files', fileName);
+        const dest = fs.createWriteStream(fdest);
+
+        req
+            .on('error', e => next)
+            .on('end', () => res.end());
+
         req.pipe(dest);
     }
 

@@ -7,7 +7,6 @@ const uuid = require('uuid/v1');
 const Router = require('./router');
 const Helper = require('../lib/helper');
 const debug = require('debug')('cryptoBus:express');
-
 const CryptoBusBoy = require('../../src/');
 
 class ExpressServer {
@@ -113,7 +112,7 @@ if (is_script) {
             if(confile === 'stream') {
                 conf.dest = {
                     createWriteStream: (filename) => {
-                        return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'get'});
+                        return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'get'})
                     },
                     deleteFailedStream: (filename) => {
                         return http.request({port: 4000, path: `/delete/${filename}`, method:'delete'});

@@ -26,12 +26,12 @@ module.exports = class File {
 
         if(Helper.is_writeStream(this.folder))
             this.writeable = () => {
-                this.write_stream = this.folder.createWriteStream(this.fullName());
+                this.write_stream = this.folder.createWriteStream(this.fullName())
                 return this.write_stream;
             };
         else
             this.writeable = () => {
-                this.write_stream = fs.createWriteStream(this.fullPath());
+                this.write_stream = fs.createWriteStream(this.fullPath())
                 return this.write_stream;
             };
     }

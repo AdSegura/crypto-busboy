@@ -10,6 +10,8 @@ const Helper = require('../lib/helper');
 const path = require('path');
 const mkdirp = require('mkdirp');
 const cloneDeep = require('lodash/cloneDeep');
+const http = require('http');
+const uuid = require('uuid/v1');
 
 // test upload limits... how to remove failed created file at remote location
 
@@ -78,24 +80,56 @@ module.exports = function suite(mode) {
         });
     });
 
-    /*describe('test remote writeStream', () => {
-        it(`Should Upload 1 file to remote writeStream server, mode [${mode}]`, async () => {
+    describe('test remote writeStream', () => {
+        it(`Should fail to Upload 1 file to an unavailable remote http writeStream server, mode [${mode}]`, async () => {
+
+            /* setup remote upload endpoint server **/
+           // const remote_server = Helper.express({});
+           // remote_server.listen();
+
             const dest = {
                 createWriteStream: (filename) => {
-                    mkdirp.sync(dir);
-                    return fs.createWriteStream(path.join(dir, filename))
+                    return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'post'})
                 },
-                path: 'server1://'
+                deleteFailedStream: (filename) => {
+                    return http.request({port: 4000, path: `/delete/${filename}`, method:'delete'});
+                },
+                path: `http://localhost:${4000}/file/`
             };
 
             const opt = {...cloneDeep(upload_options), ...{dest}};
 
             const agent = Helper.factoryAgent(opt);
+
             const res = await agent
                 .post(Helper.urls().upload)
                 .attach('my photo 2', Helper.files().f2);
 
-            res.should.have.status(200);
+            res.should.have.status(500);
         });
-    });*/
+    });
+
+    describe('test http request stream remote upload', () => {
+        it(`Should upload file to remote server through http.request stream, mode [${mode}]`, done => {
+
+            // writeStream from http.request always call event finish even if
+            // request to remote server fails...
+            // to ensure data has been written to remote http location
+            // we have to listen for a response event
+            const remote_server = Helper.express({});
+            remote_server.listen();
+            fs.createReadStream(Helper.files().f2)
+                .pipe(http.request({
+                    port:remote_server.address().port,
+                    path:`/upload_pipe/${uuid()}.png`,
+                    method: 'post'
+                }))
+                .on('error', e => {console.log('Error', e)})
+                .on('response', res => {
+                    expect(res.statusCode).eq(200);
+                    done();
+                })
+                //.on('finish', () => console.log('Finish request upload'))
+        })
+    });
 };
