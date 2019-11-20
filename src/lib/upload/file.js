@@ -17,21 +17,27 @@ module.exports = class File {
         this.newname =  File.generateNewFileName(crypto_mode);
         this.error = null;
         this.finished = false;
+        this.writeable_finished = false;
         this.failed = false;
         this.crypto_mode = crypto_mode;
         this.detector_mode = detector_mode;
         this.finished_detector =  !this.detector_mode;
         this.writeable = null;
         this.write_stream = null;
+        this.remote_http = false;
+        this.got_http_remote_res = false;
 
         if(Helper.is_writeStream(this.folder))
             this.writeable = () => {
-                this.write_stream = this.folder.createWriteStream(this.fullName())
+                if(this.folder.protocol === 'http') this.remote_http = true;
+                if(this.write_stream) return this.write_stream;
+                this.write_stream = this.folder.createWriteStream(this.fullName());
                 return this.write_stream;
             };
         else
             this.writeable = () => {
-                this.write_stream = fs.createWriteStream(this.fullPath())
+                if(this.write_stream) return this.write_stream;
+                this.write_stream = fs.createWriteStream(this.fullPath());
                 return this.write_stream;
             };
     }

@@ -16,10 +16,10 @@ const uuid = require('uuid/v1');
 // test upload limits... how to remove failed created file at remote location
 
 // test upload to remote location
-    // start server 1 stream mode port 3000
-    // start server 2 cipher mode port 4000
-    // upload file to server 1
-    // test file uploaded successfully to server 2 downloading it and md5 it
+// start server 1 stream mode port 3000
+// start server 2 cipher mode port 4000
+// upload file to server 1
+// test file uploaded successfully to server 2 downloading it and md5 it
 
 module.exports = function suite(mode) {
 
@@ -84,17 +84,18 @@ module.exports = function suite(mode) {
         it(`Should fail to Upload 1 file to an unavailable remote http writeStream server, mode [${mode}]`, async () => {
 
             /* setup remote upload endpoint server **/
-           // const remote_server = Helper.express({});
-           // remote_server.listen();
+            // const remote_server = Helper.express({});
+            // remote_server.listen();
 
             const dest = {
+                protocol: 'http',
+                path: `http://localhost:${4000}/file/`,
                 createWriteStream: (filename) => {
-                    return http.request({port: 4000, path: `/upload_pipe/${filename}`, method:'post'})
+                    return http.request({port: 4000, path: `/upload_pipe/${filename}`, method: 'post'})
                 },
                 deleteFailedStream: (filename) => {
-                    return http.request({port: 4000, path: `/delete/${filename}`, method:'delete'});
-                },
-                path: `http://localhost:${4000}/file/`
+                    return http.request({port: 4000, path: `/delete/${filename}`, method: 'delete'});
+                }
             };
 
             const opt = {...cloneDeep(upload_options), ...{dest}};
@@ -106,6 +107,88 @@ module.exports = function suite(mode) {
                 .attach('my photo 2', Helper.files().f2);
 
             res.should.have.status(500);
+        });
+
+        it(`Should fail to Upload 1 file to non existing url within remote http writeStream server, mode [${mode}]`, async () => {
+
+            /* setup remote upload endpoint server **/
+            const remote_server = Helper.express({});
+            remote_server.listen();
+
+            const dest = {
+                protocol: 'http',
+                path: `http://localhost:${remote_server.address().port}/file/`,
+                createWriteStream: (filename) => {
+                    return http.request({
+                        port: remote_server.address().port,
+                        path: `/foo/${filename}`,
+                        method: 'get' // WTF change this to POST and StatusCode will be what should be 404
+                    })
+                }
+            };
+
+            const opt = {...cloneDeep(upload_options), ...{dest}};
+
+            const agent = Helper.factoryAgent(opt);
+
+            const res = await agent
+                .post(Helper.urls().upload)
+                .attach('my photo 2', Helper.files().f2);
+
+            //Todo wtf? if GET to non existing url will get 400 statusCode, if POST 404
+            res.body.should.have
+                .property('error')
+                .eql('UploadError: remote http Upload endpoint statusCode: 400, statusMessage: Bad Request');
+
+            res.should.have.status(500);
+        });
+
+        describe('Success stream remote upload', () => {
+            let fileUploaded, fileUploaded_name;
+            it(`Should Upload 1 file to remote http writeStream server, mode [${mode}]`, async () => {
+                /* setup remote upload endpoint server **/
+                const remote_server = Helper.express({});
+                remote_server.listen();
+                const http_path = `http://localhost:${remote_server.address().port}/file/`;
+                const dest = {
+                    protocol: 'http',
+                    path: http_path,
+                    createWriteStream: (filename) => {
+                        return http.request({
+                            port: remote_server.address().port,
+                            path: `/upload_pipe/${filename}`,
+                            method: 'post'
+                        })
+                    }
+                };
+                const opt = {...cloneDeep(upload_options), ...{dest}};
+                const agent = Helper.factoryAgent(opt);
+                const res = await agent
+                    .post(Helper.urls().upload)
+                    .attach('my photo 2', Helper.files().f2);
+
+                fileUploaded = res.body.files[0].fullname;
+                fileUploaded_name = res.body.files[0].filename.split('.')[0];
+
+                res.should.have.status(200);
+                res.body.files[0].should.have
+                    .property('filename')
+                    .eql(Helper.getFileName('f2'));
+                res.body.files[0].should.have
+                    .property('folder')
+                    .eql(http_path);
+            });
+
+            it(`Should Download previously upload file mode [${mode}] and MD5 check`, async () => {
+                const agent = Helper.factoryAgent(upload_options);
+                const res = await agent
+                    .get(`${Helper.urls().getFile}/${fileUploaded}`)
+                    .buffer()
+                    .parse(binaryParser);
+
+                expect(res).to.have.status(200);
+                expect(md5(res.body)).to.equal(Helper.md5File(Helper.files()[fileUploaded_name]));
+            });
         });
     });
 
@@ -120,16 +203,18 @@ module.exports = function suite(mode) {
             remote_server.listen();
             fs.createReadStream(Helper.files().f2)
                 .pipe(http.request({
-                    port:remote_server.address().port,
-                    path:`/upload_pipe/${uuid()}.png`,
+                    port: remote_server.address().port,
+                    path: `/upload_pipe/${uuid()}.png`,
                     method: 'post'
                 }))
-                .on('error', e => {console.log('Error', e)})
+                .on('error', e => {
+                    console.log('Error', e)
+                })
                 .on('response', res => {
                     expect(res.statusCode).eq(200);
                     done();
                 })
-                //.on('finish', () => console.log('Finish request upload'))
+            //.on('finish', () => console.log('Finish request upload'))
         })
     });
 };

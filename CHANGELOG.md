@@ -1,6 +1,6 @@
-# v1.0.6
+# v2.0.0
 * lodash cloneDeep nested objects
-* remote destination streams
+* http remote destination streams
 
 # v1.0.5
 * destroy streams

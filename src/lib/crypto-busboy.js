@@ -20,6 +20,7 @@ module.exports = class CryptoBusBoy {
         this.cipher = null;
         this.options.dest = this.options.dest || os.tmpdir();
         this.remote_dest_mode = Helper.is_writeStream(this.options.dest);
+        this.options.remote_protocol = this.options.dest.protocol;
 
         this._checkDestinationFolder();
         this.options.limits = this.options.limits || {};

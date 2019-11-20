@@ -76,7 +76,7 @@ module.exports = class BusBoss {
         return async (fieldname, file, filename, encoding, mimetype) => {
             debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
-            let cipher, data_written = 0;
+            let cipher;
 
             /* on file new busFile **/
             const bfile = new File(
@@ -103,6 +103,23 @@ module.exports = class BusBoss {
                 .once('error', this.file_err(bfile, reject))
                 .on('data', this.counter(bfile));
 
+            /* listeners for writeable stream  **/
+            bfile.writeable()
+                .once('error', e => {
+                    return reject(new CryptoBusError(e))
+                })
+                .once('finish', () => {
+                    bfile.writeable_finished = true;
+                    this.finish_writeable(bfile)._return(resolve)
+                });
+
+            /* remote http stream ? listen for response **/
+            if(bfile.remote_http) {
+                bfile
+                    .writeable()
+                    .once('response', this.remoteStreamHttpResponse(bfile, resolve, reject));
+            }
+
             /* pipes **/
             if (this.detector_mode && this.crypto_mode) {
                 debug_mode('DETECTION MODE && CRYPTO MODE');
@@ -114,21 +131,15 @@ module.exports = class BusBoss {
                 else
                     fileTypeStream = await fileType.stream(bfile.file);
 
-                if (!this.allowedExtensions(fileTypeStream))
-                    return this
-                        .typeNotAllowed(bfile, fileTypeStream)
-                        ._return(resolve);
-                else
+                if (this.allowedExtensions(fileTypeStream))
                     fileTypeStream
                         .pipe(cipher.cipherStream)
                         .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
+                        .pipe(bfile.writeable());
+                else
+                    return this
+                        .typeNotAllowed(bfile, fileTypeStream)
+                        ._return(resolve);
 
             } else if (!this.detector_mode && this.crypto_mode) {
                 debug_mode('NO DETECTION MODE && CRYPTO MODE');
@@ -139,25 +150,14 @@ module.exports = class BusBoss {
                         .pipe(new Base64Decode())
                         .pipe(cipher.cipherStream)
                         .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
+                        .pipe(bfile.writeable());
+
                 else
                     bfile
                         .file
                         .pipe(cipher.cipherStream)
                         .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
+                        .pipe(bfile.writeable());
 
             } else if (this.detector_mode && !this.crypto_mode) {
                 debug_mode('DETECTION MODE && NO CRYPTO MODE');
@@ -169,19 +169,13 @@ module.exports = class BusBoss {
                 else
                     fileTypeStream = await fileType.stream(bfile.file);
 
-                if (!this.allowedExtensions(fileTypeStream))
+                if (this.allowedExtensions(fileTypeStream))
+                    fileTypeStream
+                        .pipe(bfile.writeable());
+                else
                     return this
                         .typeNotAllowed(bfile, fileTypeStream)
                         ._return(resolve);
-                else
-                    fileTypeStream
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
 
             } else if (!this.detector_mode && !this.crypto_mode) {
                 debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
@@ -190,24 +184,11 @@ module.exports = class BusBoss {
                     bfile
                         .file
                         .pipe(new Base64Decode())
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
+                        .pipe(bfile.writeable());
 
                 else
-                    bfile
-                        .file
-                        .pipe(bfile.writeable())
-                        .once('error', e => {
-                            return reject(new CryptoBusError(e))
-                        })
-                        .once('finish', () => {
-                            this.finish_writeable(bfile)._return(resolve)
-                        })
+                    bfile.file.pipe(bfile.writeable());
+
             }
         }
     }
@@ -344,15 +325,19 @@ module.exports = class BusBoss {
      * @return {Function}
      */
     finish_writeable(bfile) {
-        debug_bus_finish('WRITEABLE FINISH', bfile.toJson());
-        /*console.log(bfile.write_stream.writableFinished)
-        console.log(bfile.write_stream.finished)
-        console.log(bfile.write_stream.writableFinished)
-        console.log(bfile.write_stream.bytesWritten)
-        console.log(bfile.write_stream.complete)*/
-        bfile.finished = true;
-        this.response.files.push(bfile.toJson());
-        bfile.remListeners();
+        if(!bfile.remote_http){
+            bfile.finished = true;
+            this.response.files.push(bfile.toJson());
+            bfile.remListeners();
+            debug_bus_finish('WRITEABLE FINISH', bfile.toJson());
+        } else if(bfile.remote_http && bfile.got_http_remote_res && bfile.writeable_finished) {
+            bfile.finished = true;
+            this.response.files.push(bfile.toJson());
+            bfile.remListeners();
+            debug_bus_finish('HTTP REMOTE WRITEABLE FINISH', bfile.toJson());
+
+        }
+
         return this;
     }
 
@@ -494,6 +479,28 @@ module.exports = class BusBoss {
     counter(bfile) {
         return data => {
             bfile.size += data.length;
+        }
+    }
+
+    /**
+     * remoteStreamHttpResponse from remote http endpoint
+     *
+     * @param bfile
+     * @param resolve
+     * @param reject
+     * @return {Function} Resolve or Reject a remote stream
+     */
+    remoteStreamHttpResponse(bfile, resolve, reject) {
+        return res => {
+            bfile.got_http_remote_res = true;
+            if (res.statusCode === 200)
+                return this.finish_writeable(bfile)._return(resolve);
+
+            return reject(
+                new CryptoBusError(
+                    `remote http Upload endpoint statusCode: ${res.statusCode}, statusMessage: ${res.statusMessage}`
+                )
+            );
         }
     }
 };

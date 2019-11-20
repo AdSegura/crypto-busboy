@@ -61,11 +61,13 @@ const options = {
 };
 ```
 
-**File destination is a writeStream to a remote server**
+**File destination is a writeStream to a remote http server**
 ```js
 const http = require('http');
 
 const dest = {
+    protocol: 'http',
+    path: `http://server1/upload_pipe/`, 
     createWriteStream: (filename) => {
         return http
                   .request({
@@ -154,7 +156,7 @@ function uploadFilesCustomOpt(req, res, next){
     }
 ```
 
-## Upload output
+## Upload outputs
 **Upload f4.jpeg with form field `avatar = true`**
 
 ```json
@@ -242,7 +244,31 @@ function uploadFilesCustomOpt(req, res, next){
   "errors": []
 }
 ```
-
+**Upload cipher file to remote http server**
+```json
+{
+  "warnings":[],
+  "errors":[],
+  "files":
+     [{
+        "filename":"f2.jpeg",
+        "fullname":"1b457120-0b26-11ea-b51f-8937c8745f61-ciphered.jpeg",
+        "newname":"1b457120-0b26-11ea-b51f-8937c8745f61-ciphered",
+        "fieldname":"my photo 2",
+        "encoding":"7bit",
+        "mimetype":"image/jpeg",
+        "crypto_mode":true,
+        "detector_mode":true,
+        "ext":"jpeg",
+        "folder":"http://localhost:46063/file/",
+        "fullPath":"http://localhost:46063/file/1b457120-0b26-11ea-b51f-8937c8745f61-ciphered.jpeg",
+        "error":null,
+        "finished":true,
+        "failed":false,
+        "size":32606
+      }],
+  "fields":[]}
+```
 **`Debug=cryptoBus:*`**
 ```sh
 > DEBUG=cryptoBus:* npm run test
