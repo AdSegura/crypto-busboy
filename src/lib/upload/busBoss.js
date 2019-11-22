@@ -10,6 +10,7 @@ const debug_mime = require('debug')('cryptoBus:mime');
 const File = require('./file');
 const fileType = require('file-type');
 const CryptoBusError = require('../crypto-busboy-error');
+const {finished} = require('stream');
 
 module.exports = class BusBoss {
 
@@ -41,8 +42,8 @@ module.exports = class BusBoss {
      */
     start(req, busBoy, folder) {
         return new Promise((resolve, reject) => {
-            debug_bus('Start Busboy Core');
 
+            /* reject upload if timeout, without incoming data, reached **/
             this.detectorTimeout.detect_timeout(this.detector_timeout(reject));
 
             /* busboy events **/
@@ -56,9 +57,10 @@ module.exports = class BusBoss {
             req
                 .pipe(this.detectorTimeout)
                 .pipe(busBoy)
-                .on('error', e => {return reject(e)})
+                .on('error', e => reject(e))
                 .on('finish', this.finish_req());
 
+            /* busboy on incoming file/files **/
             busBoy.on('file', this.onFile(folder, resolve, reject));
         });
     }
@@ -103,15 +105,12 @@ module.exports = class BusBoss {
                 .once('error', this.file_err(bfile, reject))
                 .on('data', this.counter(bfile));
 
-            /* listeners for writeable stream  **/
-            bfile.writeable()
-                .once('error', e => {
-                    return reject(new CryptoBusError(e))
-                })
-                .once('finish', () => {
-                    bfile.writeable_finished = true;
-                    this.finish_writeable(bfile)._return(resolve)
-                });
+            /* finished for writeable stream  **/
+            finished(bfile.writeable(), e => {
+                if(e) return reject(new CryptoBusError(e));
+                bfile.writeable_finished = true;
+                this.finish_writeable(bfile)._return(resolve)
+            });
 
             /* remote http stream ? listen for response **/
             if(bfile.remote_http) {
