@@ -28,6 +28,7 @@ module.exports = class CryptoBusBoy {
         if (this.options.limits && this.options.limits.hasOwnProperty('allowed')){
             this.options.limits.allowed = FileExtensions
                 .normalizeExtensions(this.options.limits.allowed);
+
             this._detection_mode = true;
         }
 

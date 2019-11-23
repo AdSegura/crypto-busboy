@@ -39,7 +39,7 @@ const options = {
     dest: 'folder where to put uploads',
     key: 'super-password', // optional, if you don't want to cipher files delete this
     alg: 'aes256', // optional default to aes-256-cbc
-    timeOut: 2000, // optional request timeout, default option 5sg  
+    timeOut: 2000, // optional request timeout, default option 15sg, to disable data timeout detection pass 0    
     limits: { //optional limits
         fileSize: 2000 * 1024 * 1024,
         files: 3,
@@ -84,11 +84,14 @@ Optional param, if you want to cipher uploads you must provide a password.
 #### options.alg
 Optional param, default alg `aes-256-cbc`.
 #### options.timeOut
-By default if a client start to upload a file and there is no incoming data in 5 seconds,
+By default if a client start to upload a file and there is no incoming data in 15 seconds,
 cryptoBusBoy will assume the upload is broken and will tag the upload session as failed 
 releasing all resources.
 
 If you are dealing with very unstable clients You can increase timeOut value as you wish.
+
+Can be disabled with `options.timeOut: 0`
+
 #### options.limits
 Optional param.
 
@@ -124,9 +127,9 @@ function uploadFiles(req, res, next){
 function downloadFile(req, res, next){
         const file = req.params.file;
         cryptoBusBoy
-                    .download(req, res, next, file)
+                    .download(req, res, next, file) //will validate file param name
                     .catch(e => next(e))
-        //or if you are using req.params.file you can directly use
+        // or if you are using req.params.file you can directly use
         // cryptoBusBoy.download(req, res, next);
 }
 

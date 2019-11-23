@@ -3,11 +3,16 @@ const debug = require('debug')('cryptoBus:data_detector');
 setImmediate =  setImmediate || function (fn) { setTimeout(fn, 0) };
 const TransSMS = require('../ee/transSMS');
 
+/**
+ * to disable and make a passthrough instead of a timer pass opt.timeOut = 0
+ *
+ * @type {timeOutTransform}
+ */
 module.exports = class timeOutTransform extends Transform {
     constructor(opt) {
         super(opt);
         this.opt = Object.assign({}, opt);
-        this.opt.timeOut = this.opt.timeOut || 5000;
+        this.opt.timeOut = this.opt.timeOut || 15000;
         this.timeout = null;
         this.sms = new TransSMS;
         this.sms_emitted = false;
@@ -20,6 +25,8 @@ module.exports = class timeOutTransform extends Transform {
     }
 
     timer(){
+        if(this.opt.timeOut === 0) return;
+
         if(this.timeout){
             clearTimeout(this.timeout)
         }

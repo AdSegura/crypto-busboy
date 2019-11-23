@@ -10,7 +10,7 @@ const debug_mime = require('debug')('cryptoBus:mime');
 const File = require('./file');
 const fileType = require('file-type');
 const CryptoBusError = require('../crypto-busboy-error');
-const {finished} = require('stream');
+const {finished, PassThrough} = require('stream');
 
 module.exports = class BusBoss {
 
@@ -31,7 +31,6 @@ module.exports = class BusBoss {
         this.cipher = cipher;
         this.busboy_finished = false;
     }
-
     /**
      * start upload
      *
@@ -76,9 +75,8 @@ module.exports = class BusBoss {
      */
     onFile(folder, resolve, reject) {
         return async (fieldname, file, filename, encoding, mimetype) => {
-            debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
-            let cipher;
+            debug_bus(`File [${fieldname}]: filename: ${filename}, encoding: ${encoding}, mimeType: ${mimetype}`);
 
             /* on file new busFile **/
             const bfile = new File(
@@ -96,11 +94,11 @@ module.exports = class BusBoss {
             this.filesToDisk.push(bfile);
 
             /* cipher file ? **/
+            let cipher;
             if (this.crypto_mode) cipher = await this.getCipher();
 
             /* busboy file events **/
-            bfile
-                .file
+            bfile.file
                 .once('limit', this.file_limit(bfile, resolve))
                 .once('error', this.file_err(bfile, reject))
                 .on('data', this.counter(bfile));
@@ -108,88 +106,86 @@ module.exports = class BusBoss {
             /* finished for writeable stream  **/
             finished(bfile.writeable(), e => {
                 if(e) return reject(new CryptoBusError(e));
+
                 bfile.writeable_finished = true;
                 this.finish_writeable(bfile)._return(resolve)
             });
 
-            /* remote http stream ? listen for response **/
-            if(bfile.remote_http) {
-                bfile
-                    .writeable()
-                    .once('response', this.remoteStreamHttpResponse(bfile, resolve, reject));
-            }
+            /* remote http stream ? listen for response event **/
+            if(bfile.remote_http) this.listenForHttpResponse(bfile, resolve, reject);
 
             /* pipes **/
-            if (this.detector_mode && this.crypto_mode) {
-                debug_mode('DETECTION MODE && CRYPTO MODE');
+            if (this.detector_mode)
+                return await this.pipelineDetection(bfile, cipher, resolve);
 
-                let fileTypeStream;
-
-                if (encoding === 'base64')
-                    fileTypeStream = await fileType.stream(bfile.file.pipe(new Base64Decode()));
-                else
-                    fileTypeStream = await fileType.stream(bfile.file);
-
-                if (this.allowedExtensions(fileTypeStream))
-                    fileTypeStream
-                        .pipe(cipher.cipherStream)
-                        .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable());
-                else
-                    return this
-                        .typeNotAllowed(bfile, fileTypeStream)
-                        ._return(resolve);
-
-            } else if (!this.detector_mode && this.crypto_mode) {
-                debug_mode('NO DETECTION MODE && CRYPTO MODE');
-
-                if (encoding === 'base64')
-                    bfile
-                        .file
-                        .pipe(new Base64Decode())
-                        .pipe(cipher.cipherStream)
-                        .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable());
-
-                else
-                    bfile
-                        .file
-                        .pipe(cipher.cipherStream)
-                        .pipe(cipher.cipherStreamIV)
-                        .pipe(bfile.writeable());
-
-            } else if (this.detector_mode && !this.crypto_mode) {
-                debug_mode('DETECTION MODE && NO CRYPTO MODE');
-
-                let fileTypeStream;
-
-                if (encoding === 'base64')
-                    fileTypeStream = await fileType.stream(bfile.file.pipe(new Base64Decode()));
-                else
-                    fileTypeStream = await fileType.stream(bfile.file);
-
-                if (this.allowedExtensions(fileTypeStream))
-                    fileTypeStream
-                        .pipe(bfile.writeable());
-                else
-                    return this
-                        .typeNotAllowed(bfile, fileTypeStream)
-                        ._return(resolve);
-
-            } else if (!this.detector_mode && !this.crypto_mode) {
-                debug_mode('NO DETECTION MODE && NO CRYPTO MODE');
-
-                if (encoding === 'base64')
-                    bfile
-                        .file
-                        .pipe(new Base64Decode())
-                        .pipe(bfile.writeable());
-
-                else
-                    bfile.file.pipe(bfile.writeable());
-
-            }
+            return this.pipelineNoDetection(bfile, cipher)
         }
+    }
+
+    /**
+     * listenForHttpResponse
+     *
+     * @param bfile
+     * @param resolve
+     * @param reject
+     */
+    listenForHttpResponse(bfile, resolve, reject){
+        bfile
+            .writeable()
+            .once('response',
+                this.remoteStreamHttpResponse(bfile, resolve, reject)
+            );
+    }
+
+    /**
+     * pipeline No Detection
+     * @param bfile
+     * @param cipher
+     */
+    pipelineNoDetection(bfile, cipher){
+        debug_mode('NO DETECTION MODE');
+        bfile
+            .file
+            .pipe(this.route(bfile.encoding === 'base64', new Base64Decode()))
+            .pipe(this.route(this.crypto_mode, cipher ? cipher.cipherStream : undefined))
+            .pipe(this.route(this.crypto_mode, cipher ? cipher.cipherStreamIV : undefined))
+            .pipe(bfile.writeable());
+    }
+
+    /**
+     * pipeline with detection
+     * @param bfile
+     * @param cipher
+     * @param resolve
+     * @return {Promise<undefined>}
+     */
+   async pipelineDetection(bfile, cipher, resolve){
+        debug_mode('DETECTION MODE');
+
+        let fileTypeStream = await fileType
+            .stream(
+                bfile.file
+                    .pipe(this.route(bfile.encoding === 'base64', new Base64Decode()))
+            );
+
+        if (this.allowedExtensions(fileTypeStream))
+            fileTypeStream
+                .pipe(this.route(this.crypto_mode, cipher ? cipher.cipherStream : undefined ))
+                .pipe(this.route(this.crypto_mode, cipher ? cipher.cipherStreamIV : undefined))
+                .pipe(bfile.writeable());
+        else
+            return this.typeNotAllowed(bfile, fileTypeStream)._return(resolve);
+    }
+    /**
+     * conditional stream
+     *
+     * @param bool
+     * @param stream
+     * @return {module:stream.internal.PassThrough|*}
+     */
+    route(bool, stream){
+        if(bool) return stream;
+        return new PassThrough();
     }
 
     /**
